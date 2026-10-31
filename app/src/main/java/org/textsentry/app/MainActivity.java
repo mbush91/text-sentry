@@ -158,8 +158,12 @@ public final class MainActivity extends Activity {
         String input = sample.getText().toString();
         String url = endpoint.getText().toString().trim();
         String name = model.getText().toString().trim();
+        // Snapshot UI state on the main thread before the background request.
+        boolean useSystemOne = systemOne.isChecked();
+        String configuredReply = cannedReply.getText().toString();
+        String suppliedKey = key.getText().toString().trim();
         if (!MessagePolicy.eligible("+15555550123", input)
-                || (!systemOne.isChecked() && !MessagePolicy.validEndpoint(url))) {
+                || (!useSystemOne && !MessagePolicy.validEndpoint(url))) {
             result.setText("Preview blocked by local safety rules or invalid endpoint.");
             return;
         }
@@ -167,11 +171,10 @@ public final class MainActivity extends Activity {
         new Thread(() -> {
             String text;
             try {
-                String candidate = key.getText().toString().trim();
-                String secret = candidate.isEmpty() ? vault.read() : candidate;
-                AiDecision decision = systemOne.isChecked()
+                String secret = suppliedKey.isEmpty() ? vault.read() : suppliedKey;
+                AiDecision decision = useSystemOne
                         ? new SystemOneClient().decide(secret, name, rule, input,
-                                cannedReply.getText().toString())
+                                configuredReply)
                         : new DecisionClient().decide(
                                 url, name, secret, rule, "+15555550123", input);
                 text = decision.shouldReply ? "Preview reply: " + decision.reply : "Preview: no reply";
