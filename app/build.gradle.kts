@@ -5,11 +5,17 @@ android {
     defaultConfig {
         applicationId = "org.textsentry.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("sideload") { dimension = "distribution" }
+        create("play") { dimension = "distribution" }
+    }
+    buildFeatures { buildConfig = true }
     signingConfigs {
         create("ciRelease") {
             val path = System.getenv("APP_SIGNING_STORE_FILE")

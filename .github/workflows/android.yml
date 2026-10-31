@@ -23,12 +23,30 @@ jobs:
         with:
           gradle-version: '9.8.2'
       - name: Unit tests, lint, debug build
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-      - name: Upload installable debug APK
+        run: ./gradlew --no-daemon :app:testSideloadDebugUnitTest :app:testPlayDebugUnitTest :app:lintSideloadDebug :app:lintPlayDebug :app:assembleSideloadDebug :app:assemblePlayDebug :app:bundlePlayRelease
+      - name: Audit Play permissions in built APK
+        run: |
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$AAPT"
+          PLAY_APK="app/build/outputs/apk/play/debug/app-play-debug.apk"
+          test -s "$PLAY_APK"
+          "$AAPT" dump permissions "$PLAY_APK" > play-permissions.txt
+          if grep -E 'android.permission.(READ_SMS|RECEIVE_SMS|SEND_SMS|WRITE_SMS|RECEIVE_MMS|RECEIVE_WAP_PUSH|READ_CALL_LOG|WRITE_CALL_LOG|PROCESS_OUTGOING_CALLS)' play-permissions.txt; then
+            echo "::error::Play APK declares restricted SMS/call-log permissions."
+            exit 1
+          fi
+      - name: Upload sideload debug APK
         uses: actions/upload-artifact@v7
         with:
-          name: TextSentry-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: TextSentry-sideload-debug-apk
+          path: app/build/outputs/apk/sideload/debug/app-sideload-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload Play preview APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: TextSentry-play-preview-apk
+          path: app/build/outputs/apk/play/debug/app-play-debug.apk
           if-no-files-found: error
           retention-days: 30
       - name: Reports
@@ -63,7 +81,7 @@ jobs:
           api-level: 35
           arch: x86_64
           profile: pixel_6
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          script: ./gradlew --no-daemon :app:connectedSideloadDebugAndroidTest :app:connectedPlayDebugAndroidTest
       - name: Instrumentation reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -95,7 +113,7 @@ jobs:
             echo "::error::Missing TYPESAFE_AI_API_KEY secret."
             exit 1
           fi
-          ./gradlew --no-daemon :app:testDebugUnitTest --tests "org.textsentry.app.SystemOneLiveTest"
+          ./gradlew --no-daemon :app:testSideloadDebugUnitTest --tests "org.textsentry.app.SystemOneLiveTest"
 
   prerelease:
     name: Signed APK / prerelease
@@ -141,14 +159,22 @@ jobs:
           APP_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           APP_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           APP_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon :app:assembleRelease
+        run: ./gradlew --no-daemon :app:assembleSideloadRelease :app:bundlePlayRelease
       - name: Verify signed APK
         if: steps.signing.outputs.enabled == 'true'
         run: |
-          APK=app/build/outputs/apk/release/app-release.apk
+          APK=app/build/outputs/apk/sideload/release/app-sideload-release.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
           cp "$APK" "TextSentry-0.1.0-build-${GITHUB_RUN_NUMBER}.apk"
+          jarsigner -verify app/build/outputs/bundle/playRelease/app-play-release.aab
+      - name: Upload signed Play AAB for Play Console
+        if: steps.signing.outputs.enabled == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: TextSentry-play-signed-aab
+          path: app/build/outputs/bundle/playRelease/app-play-release.aab
+          if-no-files-found: error
       - name: Publish prerelease
         if: steps.signing.outputs.enabled == 'true'
         uses: softprops/action-gh-release@v3
