@@ -18,6 +18,7 @@ public final class MessagePolicy {
         String text = body.trim();
         if (text.isEmpty() || text.length() > 1600) return false;
         if (CODE.matcher(text).find()) return false;
+        if (text.matches("(?i)^(?:stop|unsubscribe|quit|cancel|end|help)[.!\\s]*$")) return false;
         String lower = text.toLowerCase(Locale.ROOT);
         return !lower.contains("emergency alert") && !lower.contains("your sign-in code");
     }

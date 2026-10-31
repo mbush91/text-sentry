@@ -2,6 +2,7 @@ package org.textsentry.app;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.text.InputType;
@@ -77,10 +78,28 @@ public final class MainActivity extends Activity {
         autoSend.setText("Automatically send AI-approved replies (opt-in)");
         autoSend.setChecked(settings.autoSend());
         root.addView(autoSend);
+        autoSend.setOnCheckedChangeListener((view, enabled) -> {
+            if (enabled && !settings.autoSend()) {
+                new AlertDialog.Builder(this)
+                        .setTitle("Enable automatic SMS replies?")
+                        .setMessage("TextSentry will send real SMS to eligible senders without asking you again. Carrier charges may apply. An AI can make mistakes. Keep preview mode on until you trust your rules.")
+                        .setPositiveButton("Enable auto-send", (dialog, which) -> {})
+                        .setNegativeButton("Stay in preview", (dialog, which) -> autoSend.setChecked(false))
+                        .show();
+            }
+        });
         addLabel(root, "Preview mode: with Auto-send off, incoming messages are evaluated, but no reply is transmitted.");
 
         Button save = button(root, "Save settings & request permissions");
         save.setOnClickListener(v -> save());
+
+        Button pause = button(root, "PAUSE all SMS monitoring now");
+        pause.setOnClickListener(v -> {
+            settings.pause();
+            monitor.setChecked(false);
+            autoSend.setChecked(false);
+            toast("Monitoring stopped; queued messages invalidated");
+        });
 
         sample = field(root, "Try a sample SMS (never sends a real SMS)",
                 "Sale today! Reply STOP to unsubscribe.", true, false);
@@ -110,11 +129,14 @@ public final class MainActivity extends Activity {
         }
         try {
             String updatedKey = key.getText().toString().trim();
+            boolean providerChanged = settings.systemOne() != systemOne.isChecked()
+                    || (!systemOne.isChecked() && !settings.endpoint().equals(url));
+            if (providerChanged) vault.clear();
             if (!updatedKey.isEmpty()) vault.save(updatedKey);
             if (monitor.isChecked() && !vault.hasKey()) {
-                toast("Save an API key before enabling monitoring");
+                toast("Provider changed or API key missing: monitoring remains off");
                 monitor.setChecked(false);
-                return;
+                autoSend.setChecked(false);
             }
             settings.save(url, modelName, rules, monitor.isChecked(),
                     monitor.isChecked() && autoSend.isChecked(), systemOne.isChecked(),

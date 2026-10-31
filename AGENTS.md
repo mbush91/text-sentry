@@ -24,6 +24,9 @@ Native Android SMS triage and AI-reply automation. User-configured HTTPS OpenAI-
 - Fail closed on errors, malformed JSON, missing consent, blocked senders, or invalid phone numbers.
 - Don't reply to OTPs, shortcodes, and emergency messages by default. Don't auto-STOP uncertain scam texts; replying may confirm a number as active.
 - Preview mode is default and should never transmit SMS. Auto-send requires consent + permission.
+- Preserve 24-hour persistent message deduplication, one auto-reply per sender per 24 hours, and cancellation of queued work after any settings change or Pause.
+- Changing an AI provider must invalidate the prior provider's BYOK key to avoid credential disclosure.
+- CI publishes a debug APK artifact without signing secrets. A signed GitHub prerelease is optional until the owner configures signing.
 - Add regression tests when changing validation, reply decisions, storage, dedupe, sender checks, consent or network behavior.
 - Respect Android/Google Play SMS permission policies. The first distribution is sideload only.
 
