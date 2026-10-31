@@ -15,7 +15,8 @@ import androidx.work.WorkManager;
 public final class SmsReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         if (!Telephony.Sms.Intents.SMS_RECEIVED_ACTION.equals(intent.getAction())) return;
-        if (!new Settings(context).monitoring()) return;
+        Settings settings = new Settings(context);
+        if (!settings.monitoring()) return;
         SmsMessage[] parts = Telephony.Sms.Intents.getMessagesFromIntent(intent);
         if (parts == null || parts.length == 0) return;
         String sender = parts[0].getOriginatingAddress();
@@ -26,7 +27,8 @@ public final class SmsReceiver extends BroadcastReceiver {
             if (part.getMessageBody() != null) message.append(part.getMessageBody());
         }
         Data data = new Data.Builder().putString("sender", sender)
-                .putString("sms", message.toString()).build();
+                .putString("sms", message.toString())
+                .putString("generation", settings.generation()).build();
         OneTimeWorkRequest work = new OneTimeWorkRequest.Builder(SmsWorker.class)
                 .setInputData(data)
                 .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

@@ -8,9 +8,6 @@ import androidx.annotation.NonNull;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-
 /** Fail closed: model/network/permission failures never trigger a send. */
 public final class SmsWorker extends Worker {
     public SmsWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -20,7 +17,8 @@ public final class SmsWorker extends Worker {
     @NonNull @Override public Result doWork() {
         Context context = getApplicationContext();
         Settings settings = new Settings(context);
-        if (!settings.monitoring()) return Result.success();
+        String queuedGeneration = getInputData().getString("generation");
+        if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) return Result.success();
         String sender = getInputData().getString("sender");
         String message = getInputData().getString("sms");
         if (!MessagePolicy.eligible(sender, message)) {
@@ -33,25 +31,32 @@ public final class SmsWorker extends Worker {
                 settings.addHistory("Skipped (API key missing)");
                 return Result.success();
             }
-            byte[] digest = MessageDigest.getInstance("SHA-256")
-                    .digest((sender + "\u0000" + message).getBytes(StandardCharsets.UTF_8));
-            StringBuilder hash = new StringBuilder();
-            for (byte b : digest) hash.append(String.format("%02x", b & 0xff));
-            if (!settings.reserve(hash.toString(), System.currentTimeMillis())) return Result.success();
+            ReplyLedger ledger = new ReplyLedger(context);
+            if (!ledger.reserveMessage(sender, message, System.currentTimeMillis())) {
+                settings.addHistory("Ignored (duplicate SMS)");
+                return Result.success();
+            }
 
             AiDecision decision = settings.systemOne()
                     ? new SystemOneClient().decide(key, settings.model(), settings.prompt(),
                             message, settings.cannedReply())
                     : new DecisionClient().decide(settings.endpoint(), settings.model(),
                             key, settings.prompt(), sender, message);
+            if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
+                return Result.success();
+            }
             if (!decision.shouldReply) {
                 settings.addHistory("AI: no reply");
             } else if (!settings.autoSend()) {
                 settings.addHistory("Preview only: " + decision.reply);
             } else if (context.checkSelfPermission(Manifest.permission.SEND_SMS)
-                    != PackageManager.PERMISSION_GRANTED || !settings.monitoring()) {
+                    != PackageManager.PERMISSION_GRANTED) {
                 settings.addHistory("Blocked: send permission/consent missing");
             } else {
+                if (!ledger.reserveSend(sender, System.currentTimeMillis())) {
+                    settings.addHistory("Blocked: recipient daily reply limit");
+                    return Result.success();
+                }
                 SmsManager manager = context.getSystemService(SmsManager.class);
                 if (manager == null) throw new IllegalStateException("SMS service unavailable");
                 manager.sendTextMessage(sender, null, decision.reply, null, null);
