@@ -39,8 +39,11 @@ public final class SmsWorker extends Worker {
             for (byte b : digest) hash.append(String.format("%02x", b & 0xff));
             if (!settings.reserve(hash.toString(), System.currentTimeMillis())) return Result.success();
 
-            AiDecision decision = new DecisionClient().decide(settings.endpoint(), settings.model(),
-                    key, settings.prompt(), sender, message);
+            AiDecision decision = settings.systemOne()
+                    ? new SystemOneClient().decide(key, settings.model(), settings.prompt(),
+                            message, settings.cannedReply())
+                    : new DecisionClient().decide(settings.endpoint(), settings.model(),
+                            key, settings.prompt(), sender, message);
             if (!decision.shouldReply) {
                 settings.addHistory("AI: no reply");
             } else if (!settings.autoSend()) {

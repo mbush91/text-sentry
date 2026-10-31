@@ -12,7 +12,8 @@ TextSentry is an early-stage Android SMS triage agent. It evaluates incoming SMS
 - API key encrypted at rest via Android Keystore. No backend, no telemetry, no cloud message history.
 - SMS broadcast handled quickly; network requests delegated to Android WorkManager.
 - Local safety checks for shortcodes, OTPs and oversize messages before any model call.
-- Strict JSON output: should_reply boolean and reply string of at most 120 chars.
+- Strict JSON output for chat completions; optional TypeSafe System One (Jev) typed yes/no decision with a fixed user-configured reply and conservative 0.95 approval threshold.
+- TypeSafe uses `POST https://api.typesafe.ai/v1/systemone`, not `/chat/completions`. Its BYOK key is entered in the app; CI's `TYPESAFE_AI_API_KEY` is never embedded in APKs.
 - **Monitoring off by default; auto-send off by default.** Preview decision button never sends SMS.
 - Local outcome history without raw SMS content.
 - JVM unit tests, Android lint, emulator instrumentation, and signed GitHub prereleases.
@@ -22,6 +23,8 @@ Start prompt: "Only reply STOP to unmistakably opt-in marketing messages that ex
 ## Getting started
 
 Install a prerelease APK (after signing secrets are configured), open TextSentry and configure your HTTPS chat-completions endpoint (for example https://api.openai.com/v1/chat/completions), model identifier, and API key. Test a sample message. Enable monitoring and grant RECEIVE_SMS for preview mode. Only enable auto-send after reviewing behavior and granting SEND_SMS. Your AI provider may charge for requests and your mobile carrier may charge for SMS.
+
+**Provider selection:** Default OpenAI-compatible chat model generates a response. Toggle **Use TypeSafe System One** to classify using Jev (`jev-latest`) and send only your locally configured fixed response (default `STOP`) if the classification probability is at least 0.95. On provider changes, enter that provider's API key in the app before enabling monitoring. The CI GitHub secret does not provision keys to phones.
 
 **Privacy:** When monitoring is enabled, incoming SMS bodies and senders eligible for evaluation are transmitted to your chosen AI provider under its privacy and retention terms. WorkManager temporarily persists SMS message bodies in an app-private on-device work queue until processing and eventual pruning. TextSentry does not maintain a cloud message archive or full local inbox. BYOK means users must provide their own provider account and key. On-device outcome history includes reply text and timestamps but no message bodies. This is an experimental tool; keep previews on while testing.
 
@@ -55,6 +58,12 @@ Create the keystore locally and keep a safe backup. Example:
 Branch protection must be enabled in Settings > Rules > Rulesets (or Branches): require **Quality / tests and lint** and **Android emulator / tests**, block direct pushes to main, require up-to-date branches, and allow squash merge. Enable auto-merge in General if agents should merge after checks. Merely creating workflows does not protect main.
 
 Every push to main runs both quality suites, then uses the four secrets to build and verify a signed release APK and publish a GitHub **prerelease** with tag dev-<run number>. Missing secrets fail release intentionally rather than publishing unsigned artifacts. No secrets are exposed to PR checks.
+
+### TypeSafe AI integration tests
+
+All PRs run deterministic, offline `SystemOneClientTest` checks for request schema, untrusted SMS as data, fixed reply ownership, probability threshold, invalid/missing responses, and fail-closed configuration. They require no secret. The JUnit `SystemOneLiveTest` uses two **synthetic** messages to compare promotional vs personal classifications with Jev. It is skipped in ordinary PR jobs (no secret in PR contexts) and run as a separate `TypeSafe live API smoke test` job on trusted `main` pushes or a manually dispatched workflow.
+
+Add `TYPESAFE_AI_API_KEY` under GitHub Actions secrets for this optional paid API contract test; the release job intentionally waits for the live smoke check. This CI key is used **only for tests**; users must enter their own TypeSafe API key into their app. No automated SMS is sent by tests. Run it manually from Actions → Android CI & prerelease → Run workflow, choosing the feature branch to verify live credentials before merging.
 
 ## Roadmap
 

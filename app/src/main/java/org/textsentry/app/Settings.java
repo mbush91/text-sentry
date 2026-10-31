@@ -19,14 +19,23 @@ public final class Settings {
     public String endpoint() { return prefs.getString("endpoint", DEFAULT_ENDPOINT); }
     public String model() { return prefs.getString("model", DEFAULT_MODEL); }
     public String prompt() { return prefs.getString("prompt", DEFAULT_PROMPT); }
+    public boolean systemOne() { return prefs.getBoolean("system_one", false); }
+    public String cannedReply() { return prefs.getString("canned_reply", "STOP"); }
     public boolean monitoring() { return prefs.getBoolean("monitor", false); }
     public boolean autoSend() { return prefs.getBoolean("auto_send", false); }
     public String history() { return prefs.getString("history", "No decisions yet."); }
 
     public void save(String endpoint, String model, String prompt, boolean monitoring, boolean autoSend) {
+        save(endpoint, model, prompt, monitoring, autoSend, systemOne(), cannedReply());
+    }
+
+    public void save(String endpoint, String model, String prompt, boolean monitoring,
+                     boolean autoSend, boolean useSystemOne, String cannedReply) {
         prefs.edit().putString("endpoint", endpoint.trim())
                 .putString("model", model.trim())
                 .putString("prompt", prompt.trim())
+                .putBoolean("system_one", useSystemOne)
+                .putString("canned_reply", cannedReply)
                 .putBoolean("monitor", monitoring)
                 .putBoolean("auto_send", autoSend).apply();
     }

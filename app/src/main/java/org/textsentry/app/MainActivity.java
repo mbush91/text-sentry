@@ -19,8 +19,8 @@ import java.util.ArrayList;
 
 /** Intentionally simple, native BYOK setup and preview UI. */
 public final class MainActivity extends Activity {
-    private EditText endpoint, model, prompt, key, sample;
-    private Switch monitor, autoSend;
+    private EditText endpoint, model, prompt, key, sample, cannedReply;
+    private Switch monitor, autoSend, systemOne;
     private TextView result;
     private Settings settings;
     private KeyVault vault;
@@ -46,11 +46,28 @@ public final class MainActivity extends Activity {
         addLabel(root, "Your messages. Your rules. AI-powered replies.");
         addLabel(root, "Messages are sent to your configured AI provider only when monitoring is enabled. Auto-send is disabled by default.");
 
-        endpoint = field(root, "HTTPS chat completions endpoint", settings.endpoint(), false, false);
-        model = field(root, "Model identifier", settings.model(), false, false);
+        systemOne = new Switch(this);
+        systemOne.setText("Use TypeSafe System One (Jev) classification");
+        systemOne.setChecked(settings.systemOne());
+        root.addView(systemOne);
+        addLabel(root, "System One decides whether to reply; your fixed response is never model-generated. Requires a TypeSafe BYOK key.");
+        endpoint = field(root, "HTTPS chat completions endpoint (chat provider only)", settings.endpoint(), false, false);
+        endpoint.setEnabled(!systemOne.isChecked());
+        model = field(root, "Model identifier (jev-latest for System One)", settings.model(), false, false);
         key = field(root, "API key (leave empty to keep saved key)", "", false, true);
         if (vault.hasKey()) key.setHint("API key already saved securely");
         prompt = field(root, "Rules / instructions", settings.prompt(), true, false);
+        cannedReply = field(root, "Fixed response for System One", settings.cannedReply(), false, false);
+        cannedReply.setEnabled(systemOne.isChecked());
+        systemOne.setOnCheckedChangeListener((button, selected) -> {
+            endpoint.setEnabled(!selected);
+            cannedReply.setEnabled(selected);
+            if (selected && Settings.DEFAULT_MODEL.equals(model.getText().toString())) {
+                model.setText("jev-latest");
+            } else if (!selected && "jev-latest".equals(model.getText().toString())) {
+                model.setText(Settings.DEFAULT_MODEL);
+            }
+        });
 
         monitor = new Switch(this);
         monitor.setText("Monitor incoming SMS");
@@ -85,8 +102,10 @@ public final class MainActivity extends Activity {
         String url = endpoint.getText().toString().trim();
         String modelName = model.getText().toString().trim();
         String rules = prompt.getText().toString().trim();
-        if (!MessagePolicy.validEndpoint(url) || modelName.isEmpty() || rules.isEmpty()) {
-            toast("HTTPS endpoint, model, and rules are required");
+        if ((!systemOne.isChecked() && !MessagePolicy.validEndpoint(url))
+                || modelName.isEmpty() || rules.isEmpty()
+                || (systemOne.isChecked() && !SystemOneClient.validReply(cannedReply.getText().toString()))) {
+            toast("Valid provider settings, rules and a safe fixed reply are required");
             return;
         }
         try {
@@ -98,7 +117,8 @@ public final class MainActivity extends Activity {
                 return;
             }
             settings.save(url, modelName, rules, monitor.isChecked(),
-                    monitor.isChecked() && autoSend.isChecked());
+                    monitor.isChecked() && autoSend.isChecked(), systemOne.isChecked(),
+                    cannedReply.getText().toString());
             key.setText("");
             if (vault.hasKey()) key.setHint("API key already saved securely");
             toast("Saved locally");
@@ -112,7 +132,8 @@ public final class MainActivity extends Activity {
         } catch (Exception ignored) {
             toast("Could not encrypt API key. Monitoring not enabled.");
             monitor.setChecked(false);
-            settings.save(url, modelName, rules, false, false);
+            settings.save(url, modelName, rules, false, false, systemOne.isChecked(),
+                    cannedReply.getText().toString());
         }
     }
 
@@ -137,7 +158,8 @@ public final class MainActivity extends Activity {
         String input = sample.getText().toString();
         String url = endpoint.getText().toString().trim();
         String name = model.getText().toString().trim();
-        if (!MessagePolicy.eligible("+15555550123", input) || !MessagePolicy.validEndpoint(url)) {
+        if (!MessagePolicy.eligible("+15555550123", input)
+                || (!systemOne.isChecked() && !MessagePolicy.validEndpoint(url))) {
             result.setText("Preview blocked by local safety rules or invalid endpoint.");
             return;
         }
@@ -147,8 +169,11 @@ public final class MainActivity extends Activity {
             try {
                 String candidate = key.getText().toString().trim();
                 String secret = candidate.isEmpty() ? vault.read() : candidate;
-                AiDecision decision = new DecisionClient().decide(
-                        url, name, secret, rule, "+15555550123", input);
+                AiDecision decision = systemOne.isChecked()
+                        ? new SystemOneClient().decide(secret, name, rule, input,
+                                cannedReply.getText().toString())
+                        : new DecisionClient().decide(
+                                url, name, secret, rule, "+15555550123", input);
                 text = decision.shouldReply ? "Preview reply: " + decision.reply : "Preview: no reply";
             } catch (Exception ignored) {
                 text = "Preview failed. Check provider URL, key and model.";
