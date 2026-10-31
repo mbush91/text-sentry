@@ -35,7 +35,7 @@ Install a prerelease APK (after signing secrets are configured), open TextSentry
 
 ## Development
 
-Requires JDK 17 and Android SDK API 36. The checked-in Gradle wrapper pins Gradle 8.13.
+Requires JDK 17 and Android SDK API 36. The checked-in Gradle wrapper pins Gradle 9.8.2 and the Android Gradle Plugin is 9.5.0.
 
     ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
     ./gradlew :app:connectedDebugAndroidTest

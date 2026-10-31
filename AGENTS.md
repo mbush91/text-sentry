@@ -33,7 +33,7 @@ Native Android SMS triage and AI-reply automation. User-configured HTTPS OpenAI-
 ## Continuous quality/release
 GitHub Actions PR checks: "Quality / tests and lint" and "Android emulator / tests" are required for main. Configure GitHub branch rules to require both, demand up-to-date branches, and block direct pushes; the repository admin sets these once. Never relax tests or bypass rules to ship.
 
-Push to main triggers repeat checks, then builds a signed release APK using repository signing secrets, verifies its signature, and attaches it to a GitHub **prerelease**. PRs never receive signing credentials.
+Push to main triggers repeat checks, uploads a debug APK artifact, and runs the trusted TypeSafe live contract test. If all four Android signing secrets are present, a signed release APK is verified and attached to a GitHub **prerelease**; otherwise the signed release steps are skipped. PRs never receive signing credentials.
 
 Scope discipline: prefer focused changes; document ambiguous choices, choose the safer path and proceed.
 
