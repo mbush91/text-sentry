@@ -36,3 +36,9 @@ GitHub Actions PR checks: "Quality / tests and lint" and "Android emulator / tes
 Push to main triggers repeat checks, then builds a signed release APK using repository signing secrets, verifies its signature, and attaches it to a GitHub **prerelease**. PRs never receive signing credentials.
 
 Scope discipline: prefer focused changes; document ambiguous choices, choose the safer path and proceed.
+
+## Dependency PR policy
+- Merge verified patch/minor Dependabot updates that pass both Android jobs, one at a time or grouped.
+- AGP and the Gradle wrapper must be upgraded as a compatible pair with full tests; never merge either major update alone.
+- Do not adopt third-party action licensing changes without explicit owner review. Keep gradle/actions v4 until its newer caching terms are approved.
+- Don't disable the release, integration tests, or lint to make dependency upgrades green.
