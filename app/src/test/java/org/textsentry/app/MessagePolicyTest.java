@@ -24,6 +24,13 @@ public class MessagePolicyTest {
         assertFalse(MessagePolicy.eligible("+15555550123", "x".repeat(1601)));
     }
 
+    @Test public void blocksStopOnlyAndCommonAutomatedResponseLoops() {
+        assertFalse(MessagePolicy.eligible("+15555550123", "STOP"));
+        assertFalse(MessagePolicy.eligible("+15555550123", "unsubscribe"));
+        assertFalse(MessagePolicy.eligible("+15555550123", "  QUIT  "));
+        assertTrue(MessagePolicy.eligible("+15555550123", "Save 20%, reply STOP to unsubscribe."));
+    }
+
     @Test public void endpointMustBeHttpsAndHaveNoCredentials() {
         assertTrue(MessagePolicy.validEndpoint("https://api.example.com/v1/chat/completions"));
         assertFalse(MessagePolicy.validEndpoint("http://api.example.com/v1"));
