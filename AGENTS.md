@@ -42,3 +42,10 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 - AGP and the Gradle wrapper must be upgraded as a compatible pair with full tests; never merge either major update alone.
 - Do not adopt third-party action licensing changes without explicit owner review. Keep gradle/actions v4 until its newer caching terms are approved.
 - Don't disable the release, integration tests, or lint to make dependency upgrades green.
+
+## Google Play-specific invariants
+- Two build flavors: `play` must not have ANY SMS/Call Log dangerous permissions or broadcast receivers, must not auto-monitor or auto-send SMS, and must keep user-initiated per-analysis consent. `sideload` retains experimental automation.
+- Never publish the `sideload` APK or its manifest to the Play Console. Play artifact is a signed `playRelease` AAB and requires Play App Signing, a privacy URL, and policy review.
+- Keep `play` targetSdk at least 36 for 2026. Keep an automated built-APK permission check and an Android emulator test on both flavors.
+- Do not claim Google Play approval, a default SMS role, or a restricted-permission exception without corresponding implementation and a completed policy declaration.
+- Update `PRIVACY.md` and `PLAY_RELEASE.md` alongside any changes to transmitted data or permissions.

@@ -30,6 +30,10 @@ public final class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         settings = new Settings(this);
         vault = new KeyVault(this);
+        if ("play".equals(BuildConfig.FLAVOR)) {
+            PlayUi.show(this, settings, vault);
+            return;
+        }
 
         ScrollView scroll = new ScrollView(this);
         LinearLayout root = new LinearLayout(this);
@@ -93,6 +97,9 @@ public final class MainActivity extends Activity {
         Button save = button(root, "Save settings & request permissions");
         save.setOnClickListener(v -> save());
 
+        Button privacy = button(root, "Privacy & data controls");
+        privacy.setOnClickListener(v -> showPrivacy());
+
         Button pause = button(root, "PAUSE all SMS monitoring now");
         pause.setOnClickListener(v -> {
             settings.pause();
@@ -115,6 +122,30 @@ public final class MainActivity extends Activity {
         root.addView(log);
         Button reload = button(root, "Refresh recent decisions");
         reload.setOnClickListener(v -> log.setText(settings.history()));
+    }
+
+    private void showPrivacy() {
+        new AlertDialog.Builder(this)
+                .setTitle("Your SMS and AI provider")
+                .setMessage("When monitoring is enabled, TextSentry can send the content and sender of eligible incoming SMS to the AI provider configured by you, over HTTPS. The provider processes this data under its own privacy policy. TextSentry does not operate a backend. Android WorkManager temporarily queues SMS content on-device. Local decision history, settings and encrypted keys remain on your phone. Auto-send sends real carrier SMS only after separate opt-in. You may pause monitoring or delete local data at any time.")
+                .setPositiveButton("Privacy policy", (dialog, which) -> {
+                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://github.com/mbush91/text-sentry/blob/main/PRIVACY.md")));
+                })
+                .setNeutralButton("Delete all local TextSentry data", (dialog, which) ->
+                        confirmErase())
+                .setNegativeButton("Close", null).show();
+    }
+
+    private void confirmErase() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete local app data?")
+                .setMessage("This stops automation and deletes locally stored API credentials, configuration, recent decisions and deduplication history. This cannot delete data previously sent to your chosen AI provider.")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    DataControl.deleteLocalData(this);
+                    recreate();
+                })
+                .setNegativeButton("Cancel", null).show();
     }
 
     private void save() {

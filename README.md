@@ -4,7 +4,7 @@
 
 TextSentry is an early-stage Android SMS triage agent. It evaluates incoming SMS against a personal prompt using an OpenAI-compatible **HTTPS chat-completions** model with your own API key (BYOK). It can preview a suggested response or automatically send it after separate opt-in.
 
-**Initial distribution is sideload only.** Google Play tightly restricts RECEIVE_SMS / SEND_SMS for non-default SMS handlers; this app does not claim Play eligibility.
+**Two distribution variants:** `play` is a permission-minimized, manual message assistant intended for Google Play review; `sideload` preserves experimental SMS monitoring and opt-in auto-replies. Play users **cannot automatically monitor or send SMS**. See [Play release preparation](PLAY_RELEASE.md) and [Privacy Policy](PRIVACY.md). Store approval is not guaranteed.
 
 ## What it currently does
 
@@ -35,12 +35,14 @@ Install a prerelease APK (after signing secrets are configured), open TextSentry
 
 ## Development
 
-Requires JDK 17 and Android SDK API 36. The checked-in Gradle wrapper pins Gradle 9.8.2 and the Android Gradle Plugin is 9.5.0.
+Requires JDK 17, Android SDK API 36, and a Play target SDK of 36. The checked-in Gradle wrapper pins Gradle 9.8.2 and the Android Gradle Plugin is 9.5.0.
 
-    ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-    ./gradlew :app:connectedDebugAndroidTest
+    ./gradlew :app:testSideloadDebugUnitTest :app:testPlayDebugUnitTest
+    ./gradlew :app:lintSideloadDebug :app:lintPlayDebug
+    ./gradlew :app:assembleSideloadDebug :app:assemblePlayDebug :app:bundlePlayRelease
+    ./gradlew :app:connectedSideloadDebugAndroidTest :app:connectedPlayDebugAndroidTest
 
-An **installable debug APK** is attached to every successful GitHub Actions quality run as `TextSentry-debug-apk`; no signing secrets are needed for these test builds. Debug APKs use Android's ephemeral debug key (not suitable for stable public releases). The local build is at `app/build/outputs/apk/debug/app-debug.apk`. See AGENTS.md for required autonomous TDD/PR/CI procedure. CI is the source of truth and agents should iterate on failures.
+An **installable debug APK** is attached to every successful GitHub Actions quality run as `TextSentry-sideload-debug-apk`; no signing secrets are needed for these test builds. Debug APKs use Android's ephemeral debug key (not suitable for stable public releases). The local build is at `app/build/outputs/apk/sideload/debug/app-sideload-debug.apk`. See AGENTS.md for required autonomous TDD/PR/CI procedure. CI is the source of truth and agents should iterate on failures.
 
 ## GitHub setup (one-time owner actions)
 
