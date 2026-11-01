@@ -34,7 +34,7 @@ public class GuidedSetupTest {
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.ACTIVATE, false));
     }
 
-    @Test public void checkoutEnabledGoogleUsersSeeSubscriptionBeforePermissions() {
+    @Test public void sideloadGoogleUsersSeeSubscriptionBeforePermissions() {
         assertTrue(SetupFlow.shouldPromptSubscription(true, false, true, false));
         assertFalse(SetupFlow.shouldPromptSubscription(true, false, true, true));
         assertFalse(SetupFlow.shouldPromptSubscription(true, false, false, false));
