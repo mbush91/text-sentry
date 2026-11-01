@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ themed launcher icon: single-color shield, speech and block outline. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:scaleX="0.69" android:scaleY="0.69"
+        android:translateX="79.36" android:translateY="79.36">
+        <path android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFF" android:strokeWidth="33"
+            android:strokeLineJoin="round"
+            android:pathData="M256,62 C202,93 148,109 91,120 Q74,123 74,145 V254 C74,343 136,411 256,468 C376,411 438,343 438,254 V145 Q438,123 421,120 C364,109 310,93 256,62 Z"/>
+        <path android:fillColor="@android:color/transparent"
+            android:strokeColor="#FFFFFF" android:strokeWidth="18"
+            android:strokeLineJoin="round"
+            android:pathData="M175,166 H336 C374,166 393,192 393,226 V273 C393,309 371,325 336,325 H216 L163,362 Q153,369 157,348 L162,320 C129,314 119,295 119,268 V227 C119,187 136,166 175,166 Z"/>
+        <path android:fillColor="#FFFFFF" android:pathData="M211,247 A15,15 0,1 1,181 247 A15,15 0,1 1,211 247 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M271,247 A15,15 0,1 1,241 247 A15,15 0,1 1,271 247 Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M331,247 A15,15 0,1 1,301 247 A15,15 0,1 1,331 247 Z" />
+        <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF"
+            android:strokeWidth="19"
+            android:pathData="M419,351 A58,58 0,1 1,303 351 A58,58 0,1 1,419 351 Z"/>
+        <path android:fillColor="@android:color/transparent" android:strokeColor="#FFFFFF"
+            android:strokeWidth="19" android:strokeLineCap="round"
+            android:pathData="M320,310 L402,392"/>
+    </group>
+</vector>

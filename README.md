@@ -55,3 +55,7 @@ For Google Play release preparation, see [PLAY_RELEASE.md](PLAY_RELEASE.md), [PR
 ## Signing and release
 
 Configure GitHub Actions repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to enable optional signed release publishing on main. Until configured, the signed-release job skips publication while debug APK artifacts still work. Protect main with required quality and emulator checks; merely defining workflows is not branch protection.
+
+## Launcher branding
+
+Both Android editions use the official [TextSentry shared-brand icon](https://github.com/TextSentry/test-sentry/blob/main/assets/textsentry-icon.svg): a blue-to-purple security shield, white messaging bubble and red block symbol on dark navy. The adaptive launcher icon is recreated as Android vector drawables (foreground, gradient background and a monochrome version for themed launchers), so Android can mask and scale it cleanly. The icon source of truth remains the shared branding repository.
