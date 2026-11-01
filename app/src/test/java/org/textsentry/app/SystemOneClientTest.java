@@ -92,6 +92,31 @@ public class SystemOneClientTest {
         }
     }
 
+    @Test public void customThresholdControlsApprovalAndRejectsInvalidThreshold() throws Exception {
+        SystemOneClient client = new SystemOneClient((url, key, body) -> result(0.88));
+        assertFalse(client.decide("key", SystemOneClient.MODEL, PROMPT,
+                MESSAGE, "STOP", 0.90).shouldReply);
+        assertTrue(client.decide("key", SystemOneClient.MODEL, PROMPT,
+                MESSAGE, "STOP", 0.85).shouldReply);
+        for (double invalid : new double[] {Double.NaN, -1.0, 0.49, 1.01}) {
+            try {
+                client.decide("key", SystemOneClient.MODEL, PROMPT, MESSAGE, "STOP", invalid);
+                fail("Invalid threshold must fail closed");
+            } catch (IllegalArgumentException expected) {}
+        }
+    }
+
+    @Test public void modelCannotBeOverridden() throws Exception {
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            fail("A nonlatest model must not make a network request");
+            return "";
+        });
+        try {
+            client.score("key", "jev-1.13.0", PROMPT, MESSAGE);
+            fail("Model must be locked to latest");
+        } catch (IllegalArgumentException expected) {}
+    }
+
     @Test public void missingCredentialsDoNotCallProvider() throws Exception {
         SystemOneClient client = new SystemOneClient((url, key, json) -> {
             fail("A missing key must not result in a network request");
