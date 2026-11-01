@@ -24,7 +24,7 @@ public final class HistoryActivity extends Activity {
     }
 
     private void render() {
-        LinearLayout root = UiKit.screen(this, "Message history & decisions", true);
+        LinearLayout root = UiKit.screen(this, "History", true);
         List<HistoryStore.Entry> entries;
         try {
             entries = new HistoryStore(this).list();
@@ -40,15 +40,13 @@ public final class HistoryActivity extends Activity {
             if ("preview".equals(entry.status) || "manual_suggestion".equals(entry.status)) preview++;
         }
         LinearLayout summary = UiKit.card(this, root, UiKit.HIGHLIGHT);
-        UiKit.heading(this, summary, "Your activity");
+        UiKit.heading(this, summary, "Activity");
         UiKit.description(this, summary,
                 entries.size() + " evaluated · " + replied + " sent/submitted · " + preview + " previews");
-        UiKit.description(this, summary,
-                "History is stored encrypted on this device (up to 100 records). " +
-                "It shows only messages processed by TextSentry, not your full SMS inbox.");
+        UiKit.description(this, summary, "Encrypted on this device.");
         UiKit.button(this, summary, repliesOnly ? "Show all decisions" : "Show replies only",
                 false, () -> { repliesOnly = !repliesOnly; render(); });
-        UiKit.button(this, summary, "Refresh history", false, this::render);
+
 
         int visible = 0;
         for (HistoryStore.Entry item : entries) {
@@ -62,7 +60,7 @@ public final class HistoryActivity extends Activity {
                     DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                             .format(new Date(item.timestamp)));
             UiKit.chip(this, card, statusLabel(item.status));
-            UiKit.description(this, card, "Original message");
+
             android.widget.TextView body = UiKit.text(this, item.body, 15, UiKit.INK, false);
             body.setPadding(0, UiKit.dp(this, 5), 0, UiKit.dp(this, 8));
             card.addView(body);
