@@ -10,6 +10,9 @@ import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.WindowInsetsController;
+import android.view.Window;
+import android.widget.FrameLayout;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -19,11 +22,13 @@ import android.widget.TextView;
 /** Consistent native surfaces; no WebView, framework or remote UI assets. */
 public final class UiKit {
     private UiKit() {}
-    public static final int NIGHT = Color.rgb(15, 29, 31);
-    public static final int INK = Color.rgb(27, 47, 47);
-    public static final int MUTED = Color.rgb(101, 121, 114);
-    public static final int GREEN = Color.rgb(200, 248, 113);
-    public static final int BG = Color.rgb(246, 248, 244);
+    // Keep in sync with website :root tokens in src/assets/site.css.
+    public static final int NIGHT = Color.rgb(5, 14, 32);
+    public static final int INK = Color.rgb(11, 23, 48);
+    public static final int MUTED = Color.rgb(93, 111, 136);
+    public static final int ACCENT = Color.rgb(38, 215, 238);
+    public static final int BG = Color.rgb(243, 247, 255);
+    public static final int HIGHLIGHT = Color.rgb(231, 240, 255);
 
     public static int dp(Activity a, int n) {
         return Math.round(n * a.getResources().getDisplayMetrics().density);
@@ -43,22 +48,61 @@ public final class UiKit {
         return line;
     }
 
+    private static void styleSystemBars(Activity a) {
+        Window window = a.getWindow();
+        // The theme provides these colors even before onCreate draws a single frame.
+        // Android 15+ enforces edge-to-edge, so a permanent navy overlay is drawn below.
+        if (Build.VERSION.SDK_INT < 35) {
+            window.setStatusBarColor(NIGHT);
+            window.setNavigationBarColor(BG);
+        }
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsAppearance(
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            }
+        } else {
+            View decor = window.getDecorView();
+            decor.setSystemUiVisibility((decor.getSystemUiVisibility()
+                    & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+                    | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        }
+    }
+
     public static LinearLayout screen(Activity a, String subtitle, boolean back) {
-        a.getWindow().setStatusBarColor(NIGHT);
-        a.getWindow().setNavigationBarColor(BG);
+        styleSystemBars(a);
+        FrameLayout frame = new FrameLayout(a);
+        frame.setBackgroundColor(BG);
         ScrollView scroll = new ScrollView(a);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(BG);
         LinearLayout body = vertical(a);
         scroll.addView(body);
-        a.setContentView(scroll);
+        frame.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+
+        // This fixed scrim remains dark when scrolling content behind the status bar.
+        // Window#setStatusBarColor alone does not work on Android 15+ with targetSdk 36.
+        View statusScrim = new View(a);
+        statusScrim.setBackgroundColor(NIGHT);
+        frame.addView(statusScrim, new FrameLayout.LayoutParams(-1, 0, Gravity.TOP));
+        a.setContentView(frame);
         if (Build.VERSION.SDK_INT >= 30) {
-            scroll.setOnApplyWindowInsetsListener((v, insets) -> {
+            frame.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
                 scroll.setPadding(0, bars.top, 0, bars.bottom);
+                FrameLayout.LayoutParams params =
+                        (FrameLayout.LayoutParams) statusScrim.getLayoutParams();
+                if (params.height != bars.top) {
+                    params.height = bars.top;
+                    statusScrim.setLayoutParams(params);
+                }
                 return insets;
             });
-            scroll.requestApplyInsets();
+            frame.requestApplyInsets();
         }
         LinearLayout header = vertical(a);
         header.setBackgroundColor(NIGHT);
@@ -68,7 +112,7 @@ public final class UiKit {
             Button backButton = new Button(a);
             backButton.setText("←  Back");
             backButton.setAllCaps(false);
-            backButton.setTextColor(GREEN);
+            backButton.setTextColor(ACCENT);
             backButton.setBackgroundColor(Color.TRANSPARENT);
             header.addView(backButton);
             backButton.setOnClickListener(v -> a.finish());
@@ -76,7 +120,7 @@ public final class UiKit {
         TextView title = text(a, "TextSentry", 31, Color.WHITE, true);
         title.setLetterSpacing(-0.06f);
         header.addView(title);
-        TextView sub = text(a, subtitle, 14, 0xFFB9C9C2, false);
+        TextView sub = text(a, subtitle, 14, 0xFFD0DFFF, false);
         sub.setPadding(0, dp(a, 8), 0, 0);
         header.addView(sub);
         LinearLayout content = vertical(a);
@@ -98,7 +142,7 @@ public final class UiKit {
     public static LinearLayout card(Activity a, LinearLayout parent, int background) {
         LinearLayout item = vertical(a);
         item.setPadding(dp(a, 20), dp(a, 21), dp(a, 20), dp(a, 21));
-        item.setBackground(shape(background, dp(a, 19), background == Color.WHITE ? 0xFFE3E9E2 : 0));
+        item.setBackground(shape(background, dp(a, 19), background == Color.WHITE ? 0xFFDEE7F7 : 0));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
         lp.bottomMargin = dp(a, 15);
         parent.addView(item, lp);
@@ -128,7 +172,7 @@ public final class UiKit {
         edit.setTextColor(INK);
         edit.setSingleLine(!multi);
         edit.setPadding(dp(a, 12), dp(a, 11), dp(a, 12), dp(a, 11));
-        edit.setBackground(shape(0xFFF7F9F5, dp(a, 9), 0xFFDCE7DD));
+        edit.setBackground(shape(Color.WHITE, dp(a, 9), 0xFFDEE7F7));
         if (multi) { edit.setMinLines(4); edit.setGravity(Gravity.TOP); }
         if (secret) edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         edit.setText(value);
@@ -144,7 +188,7 @@ public final class UiKit {
         b.setTextSize(14);
         b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         b.setTextColor(primary ? NIGHT : INK);
-        b.setBackground(shape(primary ? GREEN : 0xFFEAF0E9, dp(a, 11), 0));
+        b.setBackground(shape(primary ? ACCENT : HIGHLIGHT, dp(a, 11), 0));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(a, 52));
         lp.topMargin = dp(a, 14);
         parent.addView(b, lp);
@@ -153,8 +197,8 @@ public final class UiKit {
     }
 
     public static TextView chip(Activity a, LinearLayout parent, String value) {
-        TextView t = text(a, value, 12, 0xFF2F674A, true);
-        t.setBackground(shape(0xFFE2F5D9, dp(a, 20), 0));
+        TextView t = text(a, value, 12, 0xFF145180, true);
+        t.setBackground(shape(0xFFCCF8FF, dp(a, 20), 0));
         t.setPadding(dp(a, 12), dp(a, 8), dp(a, 12), dp(a, 8));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
         lp.topMargin = dp(a, 12);
