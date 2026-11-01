@@ -198,6 +198,31 @@ public final class UiKit {
         return b;
     }
 
+    /** Google-approved light treatment: standard four-color G, bordered white surface. */
+    public static LinearLayout googleSignInButton(Activity a, LinearLayout parent,
+                                                  Runnable action) {
+        LinearLayout surface = new LinearLayout(a);
+        surface.setOrientation(LinearLayout.HORIZONTAL);
+        surface.setGravity(Gravity.CENTER);
+        surface.setPadding(dp(a, 12), 0, dp(a, 12), 0);
+        surface.setBackground(shape(Color.WHITE, dp(a, 14), 0xFF747775));
+        surface.setClickable(true);
+        surface.setFocusable(true);
+        surface.setContentDescription("Sign in with Google");
+        android.widget.ImageView google = new android.widget.ImageView(a);
+        google.setImageResource(R.drawable.ic_google_g);
+        surface.addView(google, new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
+        TextView label = text(a, "Sign in with Google", 15, 0xFF1F1F1F, true);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-2, -2);
+        labelParams.leftMargin = dp(a, 10);
+        surface.addView(label, labelParams);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(a, 56));
+        params.topMargin = dp(a, 20);
+        parent.addView(surface, params);
+        surface.setOnClickListener(v -> action.run());
+        return surface;
+    }
+
     public static TextView chip(Activity a, LinearLayout parent, String value) {
         TextView t = text(a, value, 12, 0xFF145180, true);
         t.setBackground(shape(0xFFCCF8FF, dp(a, 20), 0));
