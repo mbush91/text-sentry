@@ -28,6 +28,27 @@ public class AccountStatusClientTest {
         assertEquals("Subscription status unavailable", legacy.label(false));
     }
 
+    @Test public void sandboxExpiryIsClearlyDifferentFromMissingPurchase() {
+        AccountStatusClient.Status expired = AccountStatusClient.parse(
+                "{\"user_id\":\"cognito-123\",\"subscription_status\":\"inactive\","
+                + "\"subscription_reason\":\"expired\",\"subscription_sandbox\":true,"
+                + "\"subscription_expires_at\":\"2026-11-01T20:00:00Z\"}");
+        assertEquals("Sandbox subscription expired", expired.label(true));
+        assertEquals("2026-11-01T20:00:00Z", expired.expiresAt);
+
+        AccountStatusClient.Status noPurchase = AccountStatusClient.parse(
+                "{\"user_id\":\"cognito-123\",\"subscription_status\":\"inactive\","
+                + "\"subscription_reason\":\"no_purchase\"}");
+        assertEquals("No purchase found for this account", noPurchase.label(true));
+    }
+
+    @Test public void purchasedProductMissingEntitlementHasDistinctReason() {
+        AccountStatusClient.Status missing = AccountStatusClient.parse(
+                "{\"user_id\":\"cognito-123\",\"subscription_status\":\"inactive\","
+                + "\"subscription_reason\":\"missing_entitlement\"}");
+        assertEquals("Purchase is missing the textsentry entitlement", missing.label(true));
+    }
+
     @Test public void unsupportedResponseIsRejected() {
         for (String data : new String[] {"{}", "not json",
                 "{\"subscription_status\":\"active\"}",

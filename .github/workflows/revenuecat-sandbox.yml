@@ -80,6 +80,8 @@ jobs:
           grep -F 'android:scheme="textsentry" android:host="billing"' app/src/sideload/AndroidManifest.xml
           grep -F 'android:path="/return"' app/src/sideload/AndroidManifest.xml
           grep -F 'subscription_status' app/src/main/java/org/textsentry/app/AccountStatusClient.java
+          grep -F 'subscription_reason' app/src/main/java/org/textsentry/app/AccountStatusClient.java
+          grep -F 'RevenueCat customer ID' app/src/main/java/org/textsentry/app/AccountActivity.java
 
       - name: Upload short-lived private test artifact (never a GitHub Release)
         uses: actions/upload-artifact@v7

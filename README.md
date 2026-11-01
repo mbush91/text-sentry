@@ -111,6 +111,12 @@ The sideload APK alone registers the exact custom-scheme return. Cognito sign-in
 
 The corresponding `text-sentry-iac` Lambda update must be deployed via CloudFormation Git sync, and the RevenueCat secret API key must be configured in AWS Secrets Manager. Prior versions of the API have no `subscription_status` field; the app deliberately shows *unavailable* rather than guessing. `EnforceSubscriptions: 'false'` stays unchanged until full end-to-end paid verification, so key access alone cannot prove a subscription.
 
+## Diagnosing a sandbox "Not subscribed" message
+
+RevenueCat Billing sandbox monthly subscriptions renew around every **five minutes** and end automatically after at most **six renewals** (around 30–35 minutes). These are not real monthly billing intervals. Android's Account screen uses the authenticated `GET /v1/me` response to distinguish **Sandbox subscription expired**, **No purchase found for this account**, and **Purchase is missing the textsentry entitlement**. When available, it shows the selectable `RevenueCat customer ID` (the same Cognito `sub` appended to the Purchase Link). Compare this ID with the customer in RevenueCat. An unrelated customer ID or a secret from the wrong RevenueCat project may cause an apparently empty subscriber because the V1 lookup creates unknown customers.
+
+`subscription_status: unavailable` means verification failed, not an inactive purchase. A separate user-facing status or link alone must never grant access. When diagnosing, avoid a new sandbox purchase until checking the current RevenueCat customer's expiration timestamp and entitlement. The AWS CloudFormation Git-sync deployment must contain the matching diagnostic API changes, and the RevenueCat V1 project secret must be correct. Keep `EnforceSubscriptions: 'false'` while testing.
+
 ## Signing and release
 
 Configure GitHub Actions repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to enable optional signed release publishing on main. Until configured, the signed-release job skips publication while debug APK artifacts still work. Protect main with required quality and emulator checks; merely defining workflows is not branch protection.
