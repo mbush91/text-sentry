@@ -16,10 +16,10 @@ Native Android SMS triage and AI-reply automation. User-configured HTTPS OpenAI-
 
 ## Security & behavior
 - NEVER commit API keys, keystores or personally identifiable SMS data; no secrets or raw SMS in logs.
-- The existing BYOK TypeSafe key remains supported and on-device in Android Keystore. Google-only Cognito sign-in is now optional; the Cognito control plane stores account identity and future subscriber keys but never SMS. Managed OpenRouter-key retrieval is integrated with the Account screen. Those keys MUST remain RAM-only, never saved in the OAuth token vault, SharedPreferences, Room, logs, WorkManager, backups or saved instance state. Clearing account sessions or all local app data also clears the in-memory managed key. Managed keys are not used for TypeSafe Jev classification.
+- The existing BYOK TypeSafe key remains supported and on-device in Android Keystore. Google-only Cognito sign-in is now optional; the Cognito control plane stores account identity and future subscriber keys but never SMS. Managed OpenRouter-key retrieval is integrated with the Account screen. Those keys MUST remain RAM-only, never saved in the OAuth token vault, SharedPreferences, Room, logs, WorkManager, backups or saved instance state. Clearing account sessions or all local app data also clears the in-memory managed key. Managed keys are used for TypeSafe Jev classification **via OpenRouter's Decisions API only**, never the direct TypeSafe endpoint. BYOK keys are used for direct TypeSafe Jev only. All entry points must use the same provider selection and safety thresholds, fail closed, never cross-use credentials and never send SMS contents to AWS.
 - Jev/System One is a typed classifier, not a chat-completions API. Its model decision only authorizes a fixed user-defined reply; malformed or uncertain responses must fail closed.
 - Keep `TYPESAFE_AI_API_KEY` confined to the trusted live CI job on main or a deliberate workflow_dispatch, NEVER in ordinary pull_request jobs, Gradle source, or APKs.
-- No telemetry. Never send SMS content to the TextSentry AWS backend; only submit message text to the fixed TypeSafe model after the existing explicit user opt-in. Cognito authentication is separate from SMS analysis.
+- No telemetry. Never send SMS content to the TextSentry AWS backend; submit message text directly to Jev via OpenRouter (managed) or TypeSafe (BYOK) only after the existing explicit Play consent or sideload monitoring opt-in. Cognito authentication is separate from SMS analysis.
 - All inbound messages, model responses, and remote errors are untrusted. Never execute model-provided actions or use model-provided recipients.
 - Fail closed on errors, malformed JSON, missing consent, blocked senders, or invalid phone numbers.
 - Don't reply to OTPs, shortcodes, and emergency messages by default. Don't auto-STOP uncertain scam texts; replying may confirm a number as active.
@@ -52,7 +52,7 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 
 ## Official native UI and fixed provider
 
-- The app always uses TypeSafe AI Jev with model alias `jev-latest`; users must not choose or override the model/endpoint. Any old chat-provider key must be invalidated on upgrade.
+- The app always uses TypeSafe AI Jev: direct BYOK endpoint/model `https://api.typesafe.ai/v1/systemone` / `jev-latest`, or managed `https://openrouter.ai/api/alpha/decisions` / `~typesafe/jev-latest`. Do not allow user override; keep one typed question, selected categories and fail-closed behavior. Any old chat-provider key must be invalidated on upgrade.
 - Both Android flavors have a clean home/dashboard and a separate settings activity. Use consistent native colors, readable cards and accessible labels, aligned with TextSentry.org.
 - Settings manage user BYOK credentials in Android Keystore, instructions and 50–100% yes-probability threshold (default 95%). Worker/preview/Play review all use the configured threshold.
 - The model never generates a reply or selects a recipient; qualifying messages only suggest/auto-send fixed STOP.
