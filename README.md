@@ -4,6 +4,12 @@
 
 TextSentry is an Android message assistant powered by **TypeSafe AI / Jev System One (`jev-latest`)**. The AI provider, endpoint and model are fixed by the app and **cannot be changed**. Each user enters their own TypeSafe API key, checks message categories, adds optional natural-language restrictions, and selects a minimum match probability (50–100%, default **95%**). Jev returns a yes probability, not free-form text. The fixed opt-out reply is **STOP**.
 
+## TextSentry account (Google sign-in)
+
+The Play and sideload editions now offer Google sign-in / sign-up through AWS Cognito. First-time Google users create an account and returning users sign in through the same browser-based authorization-code + S256 PKCE flow. The app loads public Cognito configuration from `https://api.textsentry.org/v1/auth/config`, then keeps Cognito access/ID/refresh tokens encrypted locally with a separate Android Keystore AES-GCM key. Sign-out erases the local session, as does Delete all app data.
+
+**This is authentication only:** Existing BYOK TypeSafe classification remains unchanged. RevenueCat billing and managed OpenRouter key fetching into RAM-only are not integrated yet; Google sign-in does not enable monitoring, auto-replies, or paid analysis. No SMS contents reach TextSentry AWS.
+
 Two distributions are maintained:
 
 - **Play flavor:** A manual assistant for pasted/shared text. It requires explicit per-analysis consent, never monitors incoming SMS, never sends SMS automatically and holds no restricted SMS permissions. The Play flavor is **not yet approved or published**.
