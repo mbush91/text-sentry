@@ -46,6 +46,24 @@ public class SettingsSafetyTest {
         assertEquals("jev-latest", updated.model());
     }
 
+    @Test public void categorySelectionsPersistAndChangeTheQueuedWorkGeneration() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        context.deleteSharedPreferences("textsentry_settings");
+        Settings settings = new Settings(context);
+        assertEquals(MessageCategories.MARKETING, settings.categoryMask());
+        String initial = settings.generation();
+        settings.saveCategoryPolicy("Ignore messages about my car", 93,
+                MessageCategories.VOTE | MessageCategories.POLITICAL);
+        Settings next = new Settings(context);
+        assertEquals(MessageCategories.VOTE | MessageCategories.POLITICAL, next.categoryMask());
+        assertNotEquals(initial, next.generation());
+        assertTrue(next.effectivePrompt().contains("nonpartisan get-out-the-vote"));
+        assertTrue(next.effectivePrompt().contains("candidate or political party campaigns"));
+        assertFalse(next.effectivePrompt().contains("marketing advertisements"));
+        next.saveCategoryPolicy("", 95, 0);
+        assertEquals("", next.effectivePrompt());
+    }
+
     @Test public void savingAndPausingInvalidateAlreadyQueuedMessages() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         context.deleteSharedPreferences("textsentry_settings");
