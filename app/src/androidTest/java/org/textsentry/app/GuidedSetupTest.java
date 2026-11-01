@@ -44,6 +44,13 @@ public class GuidedSetupTest {
         assertFalse(SetupFlow.shouldPromptSubscription(true, true, true, false));
     }
 
+    @Test public void oldSetupProgressMigratesWithoutSkippingSmsInstructions() {
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(0));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(1));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(2));
+        assertEquals(SetupFlow.ACTIVATE, SetupFlow.migrateLegacyStage(3));
+    }
+
     @Test public void subscriptionPromptIsRecordedIndependentlyOfPermissionSteps() {
         Context context = app();
         SetupFlow.reset(context);
