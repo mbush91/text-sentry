@@ -32,8 +32,14 @@ public final class SetupActivity extends Activity {
     private void goHome() {
         if (openingHome || isFinishing()) return;
         openingHome = true;
-        startActivity(new Intent(this, MainActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+        Intent home = new Intent(this, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        String shared = getIntent().getStringExtra(Intent.EXTRA_TEXT);
+        if (shared != null && !shared.isEmpty()) {
+            home.setAction(Intent.ACTION_SEND).setType("text/plain");
+            home.putExtra(Intent.EXTRA_TEXT, shared);
+        }
+        startActivity(home);
         finish();
     }
 
