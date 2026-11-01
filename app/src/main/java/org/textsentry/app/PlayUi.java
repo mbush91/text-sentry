@@ -26,7 +26,9 @@ public final class PlayUi {
 
         LinearLayout review = UiKit.card(activity, root, 0xFFFFFFFF);
         UiKit.heading(activity, review, "Review a message");
-        UiKit.description(activity, review, "Paste or share text, then opt in to this analysis.");
+        UiKit.description(activity, review,
+                "Selected: " + MessageCategories.summary(settings.categoryMask()) +
+                ". Paste or share a text, then opt in to analysis.");
         String incoming = "";
         Intent incomingIntent = activity.getIntent();
         if (Intent.ACTION_SEND.equals(incomingIntent.getAction())
@@ -56,7 +58,17 @@ public final class PlayUi {
                 outcome.setText("Add your TypeSafe API key in Settings first.");
                 return;
             }
-            final String policy = settings.prompt();
+            final String policy;
+            try {
+                policy = settings.effectivePrompt();
+            } catch (IllegalArgumentException invalid) {
+                outcome.setText("Combined rules are too long. Update Settings.");
+                return;
+            }
+            if (policy.isEmpty()) {
+                outcome.setText("Select a message category in Settings first.");
+                return;
+            }
             final double threshold = settings.confidence() / 100.0;
             consent.setChecked(false);
             outcome.setText("Analyzing with TypeSafe…");
@@ -108,7 +120,7 @@ public final class PlayUi {
         UiKit.heading(activity, footer, "You stay in control");
         UiKit.description(activity, footer,
                 "Jev latest · " + settings.confidence() +
-                "% minimum match probability. Manage your key, instructions, and local history in Settings.");
+                "% minimum match probability. Manage categories, instructions, and local history in Settings.");
         UiKit.button(activity, footer, "Open settings", false, () ->
                 activity.startActivity(new Intent(activity, SettingsActivity.class)));
     }
