@@ -78,7 +78,8 @@ public final class PlayUi {
                 String status, suggestion;
                 try {
                     SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
-                            vault.read(), SystemOneClient.MODEL, policy, input, "STOP", threshold);
+                            vault.read(), SystemOneClient.MODEL, policy, input, "STOP", threshold,
+                            DeveloperMode.traceSink(activity, "manual"));
                     AiDecision answer = evaluation.decision;
                     new HistoryStore(activity).add("Manual review", input, evaluation.confidence,
                             answer.shouldReply ? "STOP" : "",

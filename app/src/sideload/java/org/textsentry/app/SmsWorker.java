@@ -47,7 +47,8 @@ public final class SmsWorker extends Worker {
 
             SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
                     key, SystemOneClient.MODEL, combinedInstructions,
-                    message, "STOP", settings.confidence() / 100.0);
+                    message, "STOP", settings.confidence() / 100.0,
+                    DeveloperMode.traceSink(context, "sms"));
             if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
                 return Result.success();
             }

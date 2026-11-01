@@ -23,6 +23,11 @@ public final class SystemOneClient {
         String post(String endpoint, String apiKey, String body) throws Exception;
     }
 
+    /** Receives exact JSON request and raw JSON response; credentials are never included. */
+    public interface TraceSink {
+        void capture(String request, String response) throws Exception;
+    }
+
     private final Transport transport;
     public SystemOneClient() { this(new HttpsTransport()); }
     public SystemOneClient(Transport transport) {
@@ -32,6 +37,11 @@ public final class SystemOneClient {
 
     public double score(String apiKey, String model, String userRule, String message)
             throws Exception {
+        return score(apiKey, model, userRule, message, null);
+    }
+
+    private double score(String apiKey, String model, String userRule, String message,
+                         TraceSink trace) throws Exception {
         if (isEmpty(apiKey) || !MODEL.equals(model) || isEmpty(userRule) || isEmpty(message)) {
             throw new IllegalArgumentException("Missing System One settings");
         }
@@ -50,7 +60,17 @@ public final class SystemOneClient {
                 .put("model", MODEL)
                 .put("state", message)
                 .put("questions", new JSONObject().put("reply", question));
-        final String raw = transport.post(ENDPOINT, apiKey.trim(), request.toString());
+        final String body = request.toString();
+        String raw = "";
+        try {
+            raw = transport.post(ENDPOINT, apiKey.trim(), body);
+        } finally {
+            // An optional local diagnostic must never change a provider decision or
+            // expose the key. Transport failure has an empty response by design.
+            if (trace != null) {
+                try { trace.capture(body, raw); } catch (Exception ignored) {}
+            }
+        }
         try {
             JSONObject json = new JSONObject(raw);
             if (isEmpty(json.optString("model", ""))) throw new IllegalArgumentException("No model");
@@ -94,13 +114,19 @@ public final class SystemOneClient {
 
     public Evaluation evaluate(String apiKey, String model, String userRule,
                                String message, String cannedReply, double threshold) throws Exception {
+        return evaluate(apiKey, model, userRule, message, cannedReply, threshold, null);
+    }
+
+    public Evaluation evaluate(String apiKey, String model, String userRule,
+                               String message, String cannedReply, double threshold,
+                               TraceSink trace) throws Exception {
         if (!Double.isFinite(threshold) || threshold < 0.50 || threshold > 1.0) {
             throw new IllegalArgumentException("Confidence threshold must be 50–100%");
         }
         if (!validReply(cannedReply)) {
             throw new IllegalArgumentException("Invalid configured reply");
         }
-        double confidence = score(apiKey, model, userRule, message);
+        double confidence = score(apiKey, model, userRule, message, trace);
         boolean approved = confidence >= threshold;
         // User-selected reply only; never send message text from an LLM response.
         AiDecision decision = AiDecision.parse(new JSONObject().put("should_reply", approved)

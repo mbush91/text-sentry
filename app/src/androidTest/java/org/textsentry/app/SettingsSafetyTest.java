@@ -80,4 +80,21 @@ public class SettingsSafetyTest {
         assertFalse(settings.autoSend());
         assertNotEquals(running, settings.generation());
     }
+    @Test public void developerModeIsHiddenByDefaultAndPersistsIndependentlyOfRules() {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        context.deleteSharedPreferences("textsentry_settings");
+        Settings settings = new Settings(context);
+        assertFalse(settings.developerMode());
+        String generation = settings.generation();
+        settings.setDeveloperMode(true);
+        assertTrue(new Settings(context).developerMode());
+        assertEquals(generation, settings.generation());
+        settings.saveCategoryPolicy("Ignore messages from my dentist.", 90,
+                MessageCategories.MARKETING);
+        assertTrue(settings.effectivePrompt().contains("Ignore messages from my dentist."));
+        assertTrue(settings.developerMode());
+        settings.setDeveloperMode(false);
+        assertFalse(new Settings(context).developerMode());
+    }
+
 }

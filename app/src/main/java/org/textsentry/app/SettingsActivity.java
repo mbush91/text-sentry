@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.widget.CheckBox;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -19,12 +17,13 @@ public final class SettingsActivity extends Activity {
     private Settings settings;
     private KeyVault vault;
     private EditText apiKey;
-    private EditText prompt;
     private CheckBox voteCategory, politicalCategory, marketingCategory;
     private TextView generatedInstructions;
     private TextView confidenceLabel;
     private TextView keyState;
     private int confidence;
+    private int developerTaps;
+    private LinearLayout root, developerCard;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -32,9 +31,26 @@ public final class SettingsActivity extends Activity {
         vault = new KeyVault(this);
         confidence = settings.confidence();
 
-        LinearLayout root = UiKit.screen(this, "Your rules. Your decisions.", true);
+        root = UiKit.screen(this, "Your rules. Your decisions.", true);
         LinearLayout provider = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, provider, "AI connection");
+        TextView heading = UiKit.heading(this, provider, "AI connection");
+        // Easter egg: tap the AI connection heading seven times.
+        heading.setOnClickListener(v -> {
+            if (settings.developerMode()) return;
+            if (++developerTaps >= 7) {
+                developerTaps = 0;
+                new AlertDialog.Builder(this)
+                        .setTitle("Enable developer mode?")
+                        .setMessage("Developer mode keeps up to five complete Jev request and " +
+                                "response bodies locally, including sensitive SMS text and rules. " +
+                                "The log is encrypted; API keys are not included.")
+                        .setPositiveButton("Enable", (dialog, which) -> {
+                            settings.setDeveloperMode(true);
+                            refreshDeveloperCard();
+                            toast("Developer mode enabled");
+                        }).setNegativeButton("Cancel", null).show();
+            }
+        });
         UiKit.description(this, provider,
                 "TypeSafe AI · System One. Your key is encrypted on this device.");
         UiKit.chip(this, provider, "✓ Jev · latest model");
@@ -68,25 +84,14 @@ public final class SettingsActivity extends Activity {
                 "A message does not need to mention STOP or provide an unsubscribe option. " +
                 "Official voting information, security codes and personal texts remain excluded.");
 
-        UiKit.heading(this, rules, "Additional instructions");
-        prompt = UiKit.input(this, rules, "Optional extra restrictions",
-                settings.prompt(), true, false);
-        prompt.setHint("e.g., Ignore messages from local charities");
         UiKit.description(this, rules,
-                "Your selected categories and these extra restrictions are combined " +
-                "into one TypeSafe request per eligible message.");
+                "Additional prompting, when configured, is combined after the selected " +
+                "categories in the same Jev request.");
         generatedInstructions = UiKit.description(this, rules, "");
         generatedInstructions.setMaxLines(12);
         voteCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
         politicalCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
         marketingCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
-        prompt.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence t, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence t, int start, int before, int count) {
-                updatePreview();
-            }
-            @Override public void afterTextChanged(Editable e) {}
-        });
         updatePreview();
         confidenceLabel = UiKit.description(this, rules,
                 "Minimum approval probability: " + confidence + "%");
@@ -162,7 +167,7 @@ public final class SettingsActivity extends Activity {
 
     private void updatePreview() {
         try {
-            String combined = MessageCategories.compose(selectedMask(), prompt.getText().toString());
+            String combined = MessageCategories.compose(selectedMask(), settings.prompt());
             generatedInstructions.setText(combined.isEmpty()
                     ? "No categories selected — messages will not be evaluated."
                     : "Combined AI instructions (one request):\n" + combined);
@@ -178,7 +183,7 @@ public final class SettingsActivity extends Activity {
     }
 
     private void save() {
-        String policy = prompt.getText().toString().trim();
+        String policy = settings.prompt(); // Keep the developer prompt on normal saves.
         String entered = apiKey.getText().toString().trim();
         try {
             // If saving the key fails, never enable automation or silently lose settings.
@@ -190,6 +195,31 @@ public final class SettingsActivity extends Activity {
         } catch (Exception ex) {
             toast("Couldn't save. Check the key and instructions.");
         }
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (root != null) {
+            refreshDeveloperCard();
+            updatePreview();
+        }
+    }
+
+    private void refreshDeveloperCard() {
+        if (!settings.developerMode()) {
+            if (developerCard != null) {
+                root.removeView(developerCard);
+                developerCard = null;
+            }
+            return;
+        }
+        if (developerCard != null) return;
+        developerCard = UiKit.card(this, root, 0xFFE4F3D8);
+        UiKit.heading(this, developerCard, "Developer mode");
+        UiKit.description(this, developerCard,
+                "Advanced prompting and encrypted Jev request/response traces.");
+        UiKit.button(this, developerCard, "Open developer tools  →", true, () ->
+                startActivity(new Intent(this, DeveloperActivity.class)));
     }
 
     private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
