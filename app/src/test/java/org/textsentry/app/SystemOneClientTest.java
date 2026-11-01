@@ -184,4 +184,50 @@ public class SystemOneClientTest {
             // Good
         }
     }
+    @Test public void developerTraceRecordsExactModelPayloadAndRawOutputWithoutCredentials() throws Exception {
+        final String[] sent = {null};
+        final String[] captured = new String[2];
+        String raw = result(0.96);
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            sent[0] = body;
+            return raw;
+        });
+        SystemOneClient.Evaluation evaluation = client.evaluate(
+                "private-key", SystemOneClient.MODEL, PROMPT, MESSAGE, "STOP", 0.95,
+                (request, response) -> {
+                    captured[0] = request;
+                    captured[1] = response;
+                });
+        assertEquals(sent[0], captured[0]);
+        assertEquals(raw, captured[1]);
+        assertFalse(captured[0].contains("private-key"));
+        assertTrue(evaluation.decision.shouldReply);
+    }
+
+    @Test public void developerTraceObservesTransportFailuresWithoutChangingFailClosedBehavior() {
+        final String[] captured = new String[2];
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            throw new java.io.IOException("No service");
+        });
+        try {
+            client.evaluate("private-key", SystemOneClient.MODEL, PROMPT, MESSAGE, "STOP",
+                    0.95, (request, response) -> {
+                        captured[0] = request;
+                        captured[1] = response;
+                    });
+            fail("Unavailable provider must fail closed");
+        } catch (Exception expected) {
+            assertNotNull(captured[0]);
+            assertTrue(captured[0].contains(MESSAGE));
+            assertEquals("", captured[1]);
+        }
+    }
+
+    @Test public void failingDeveloperTraceSinkCannotChangeTheModelDecision() throws Exception {
+        SystemOneClient client = new SystemOneClient((url, key, body) -> result(0.98));
+        assertTrue(client.evaluate("key", SystemOneClient.MODEL, PROMPT, MESSAGE, "STOP",
+                0.95, (request, response) -> { throw new IllegalStateException("Disk full"); })
+                .decision.shouldReply);
+    }
+
 }

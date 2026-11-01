@@ -59,4 +59,27 @@ public class HistoryStoreTest {
         DataControl.deleteLocalData(app);
         assertTrue(new HistoryStore(app).list().isEmpty());
     }
+    @Test public void developerTracesAreBoundedEncryptedAndIndependentlyClearable() throws Exception {
+        Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        HistoryStore store = new HistoryStore(app);
+        store.clear();
+        String rawRequest = "{\\"state\\":\\"Private test SMS\\"}";
+        String rawResponse = "{\\"noul\\":0.97}";
+        for (int i = 0; i < HistoryStore.MAX_TRACES + 3; i++) {
+            store.addTrace("sample", rawRequest + i, rawResponse);
+        }
+        String ciphertext = app.getSharedPreferences("textsentry_message_history", Context.MODE_PRIVATE)
+                .getString("encrypted_traces", "");
+        assertFalse(ciphertext.isEmpty());
+        assertFalse(ciphertext.contains("Private test SMS"));
+        assertEquals(HistoryStore.MAX_TRACES, new HistoryStore(app).traces().size());
+        assertEquals(rawResponse, store.traces().get(0).response);
+        assertEquals("sample", store.traces().get(0).source);
+        store.add("+15550001111", "Ordinary history", 0.5, "", "no_reply", "sms");
+        store.clearTraces();
+        assertTrue(store.traces().isEmpty());
+        assertEquals(1, store.list().size());
+        store.clear();
+    }
+
 }
