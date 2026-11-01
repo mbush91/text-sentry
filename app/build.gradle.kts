@@ -13,8 +13,16 @@ android {
     }
     flavorDimensions += "distribution"
     productFlavors {
-        create("sideload") { dimension = "distribution" }
-        create("play") { dimension = "distribution" }
+        create("sideload") {
+            dimension = "distribution"
+            // Explicit opt-in until sandbox checkout and paid entitlement enforcement pass.
+            buildConfigField("boolean", "WEB_CHECKOUT_ENABLED",
+                (System.getenv("TEXTSENTRY_ENABLE_WEB_CHECKOUT") == "true").toString())
+        }
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "WEB_CHECKOUT_ENABLED", "false")
+        }
     }
     buildFeatures { buildConfig = true }
     signingConfigs {
