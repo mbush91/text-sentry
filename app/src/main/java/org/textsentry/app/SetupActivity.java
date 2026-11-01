@@ -104,8 +104,8 @@ public final class SetupActivity extends Activity {
     }
 
     private void renderLogin() {
-        LinearLayout root = stage("Step 1 of 4 · Account",
-                "Welcome to TextSentry", "Stop unwanted political and marketing texts.", 1);
+        LinearLayout root = stage("01 / SIGN IN",
+                "Stop sorting through spam.", "Less spam. More control.", 1);
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.mipmap.ic_launcher);
         logo.setContentDescription("TextSentry logo");
@@ -155,14 +155,14 @@ public final class SetupActivity extends Activity {
                 }
             });
         }
-        TextView note = UiKit.description(this, root, "Your messages never pass through TextSentry servers.");
+        TextView note = UiKit.description(this, root, "Private by design. Your texts never reach TextSentry servers.");
         note.setGravity(Gravity.CENTER);
     }
 
     private void renderBattery() {
-        LinearLayout root = stage("Step 2 of 4 · Background access",
-                "Keep TextSentry running",
-                "In Android settings, choose Battery → Unrestricted.", 2);
+        LinearLayout root = stage("02 / BACKGROUND ACCESS",
+                "Keep protection running.",
+                "Set TextSentry battery usage to Unrestricted.", 2);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.chip(this, card, SetupPermissions.unrestricted(this)
                 ? "✓ Battery optimization exemption detected" : "○ Check battery settings");
@@ -174,14 +174,14 @@ public final class SetupActivity extends Activity {
             display();
         });
         TextView note = UiKit.description(this, root,
-                "Some phones use different battery menus. This is recommended, not required.");
+                "Optional for better reliability. Does not grant SMS access.");
         note.setTextSize(12);
     }
 
     private void renderPermissions() {
-        LinearLayout root = stage("Step 3 of 4 · Permissions",
-                "Allow SMS access",
-                "Needed to check incoming texts. Replies are optional.", 3);
+        LinearLayout root = stage("03 / SMS PERMISSIONS",
+                "Allow message access.",
+                "Let TextSentry check incoming texts. Replies are optional.", 3);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.chip(this, card, SetupPermissions.hasIncoming(this)
                 ? "✓ Incoming SMS allowed" : "○ Incoming SMS not allowed");
@@ -217,9 +217,9 @@ public final class SetupActivity extends Activity {
     }
 
     private void renderActivation() {
-        LinearLayout root = stage("Step 4 of 4 · Ready",
-                "You're ready",
-                "Start in preview mode. You can enable automatic replies later.", 4);
+        LinearLayout root = stage("04 / START PROTECTION",
+                "You're in control.",
+                "Preview messages first. Automatic replies are optional.", 4);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.chip(this, card, SetupPermissions.hasIncoming(this)
                 ? "✓ Incoming SMS ready" : "○ Incoming SMS permission needed");
@@ -249,14 +249,14 @@ public final class SetupActivity extends Activity {
     }
 
     private void renderManualStart() {
-        LinearLayout root = stage("Step 2 of 2 · Ready", "You're ready",
-                "Review messages you paste or share. Each analysis needs your approval.", 2);
+        LinearLayout root = stage("02 / START REVIEWING", "You're in control.",
+                "Choose which messages to review. No automatic SMS access.", 2);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.button(this, card, "Start reviewing", true, () -> {
             SetupFlow.complete(this);
             goHome();
         });
-        UiKit.description(this, card, "This edition doesn't monitor or send SMS.");
+        UiKit.description(this, card, "Every analysis needs your approval.");
     }
 
     @Override public void onRequestPermissionsResult(int code, String[] permissions,
