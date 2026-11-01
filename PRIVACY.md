@@ -16,8 +16,8 @@ TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not ha
 
 ## Information handled
 
-- Your provider API key, endpoint, model name and instructions are stored locally on your device. The API key is encrypted using Android Keystore.
-- The text you explicitly submit in the Play edition, or eligible SMS body and sender in the sideload edition when monitoring is on, is transmitted **only to the AI provider you configure** to obtain an evaluation. The generic chat interface uses a placeholder sender number for manually submitted Play text.
+- Your TypeSafe API key, confidence threshold and instructions are stored locally on your device. The API key is encrypted using Android Keystore. The provider and model are not configurable.
+- The text you explicitly submit in the Play edition, or eligible SMS body and sender in the sideload edition when monitoring is on, is transmitted **to TypeSafe AI (Jev System One)** to obtain an evaluation. The provider and model are fixed in this version. The generic chat interface uses a placeholder sender number for manually submitted Play text.
 - The AI provider may process, store or retain submitted content in accordance with **its own privacy policy and terms**. Check those terms before sending private or sensitive text. Do not submit one-time codes, passwords or other sensitive content.
 - In the Play edition, the number you enter to compose an SMS is passed only to the installed SMS app selected by Android. TextSentry does not send it to your AI provider.
 
@@ -27,7 +27,7 @@ In the Play edition, no message is submitted to AI without checking the consent 
 
 ## Retention and deletion
 
-TextSentry does not operate a cloud account. Use **Delete all local TextSentry data** within the app, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
+TextSentry does not operate a cloud account. Use **Clear local decision history** to remove TextSentry's outcome log, **Delete all local TextSentry data** to remove all local app records, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. These controls do **not** delete SMS messages from the device's default messaging app; inbox deletion requires default SMS handler capabilities that TextSentry does not currently provide. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
 
 ## Sharing, security and children
 

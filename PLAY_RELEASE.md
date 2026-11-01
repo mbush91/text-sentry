@@ -4,7 +4,7 @@
 
 **Two product flavors** are intentionally offered:
 
-- `play`: text shared/pasted manually, user-consented AI evaluation, editable suggestion and user-initiated SMS composition via `ACTION_SENDTO`. **No SMS or call-log permissions, receivers, monitoring or automatic SMS sends.**
+- `play`: text shared/pasted manually, user-consented TypeSafe AI evaluation, editable suggestion and user-initiated SMS composition via `ACTION_SENDTO`. **No SMS or call-log permissions, receivers, monitoring or automatic SMS sends.**
 - `sideload`: the existing experimental SMS monitor/auto-send features with Android `RECEIVE_SMS` and `SEND_SMS`; **do not upload this artifact to Play Console.**
 
 Google Play's SMS policy requires active default SMS handler status or an individually approved exception for the restricted permissions. A hypothetical exception for *device automation* requires automation across multiple areas of Android; this app currently automates SMS only and should not claim it qualifies. A spam-blocking exception is also subject to Google review, not guaranteed. Do not change the manifest to mimic default-handler eligibility without implementing and testing a complete usable SMS/MMS client.

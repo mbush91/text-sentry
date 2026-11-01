@@ -49,3 +49,11 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 - Keep `play` targetSdk at least 36 for 2026. Keep an automated built-APK permission check and an Android emulator test on both flavors.
 - Do not claim Google Play approval, a default SMS role, or a restricted-permission exception without corresponding implementation and a completed policy declaration.
 - Update `PRIVACY.md` and `PLAY_RELEASE.md` alongside any changes to transmitted data or permissions.
+
+## Official native UI and fixed provider
+
+- The app always uses TypeSafe AI Jev with model alias `jev-latest`; users must not choose or override the model/endpoint. Any old chat-provider key must be invalidated on upgrade.
+- Both Android flavors have a clean home/dashboard and a separate settings activity. Use consistent native colors, readable cards and accessible labels, aligned with TextSentry.org.
+- Settings manage user BYOK credentials in Android Keystore, instructions and 50–100% yes-probability threshold (default 95%). Worker/preview/Play review all use the configured threshold.
+- The model never generates a reply or selects a recipient; qualifying messages only suggest/auto-send fixed STOP.
+- Local decision history can be cleared on-device. Do not claim or attempt deletion of carrier inbox SMS without a genuine default SMS handler implementation and policy clearance.
