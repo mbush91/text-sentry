@@ -20,6 +20,15 @@ public class WebCheckoutTest {
         } catch (IllegalArgumentException expected) {}
     }
 
+    @Test public void sandboxCheckoutKeepsAccountIdentity() {
+        assertEquals("https://pay.rev.cat/sandbox/test_token/user-id",
+                WebCheckout.purchaseUrl("user-id", "https://pay.rev.cat/sandbox/test_token/"));
+        try {
+            WebCheckout.purchaseUrl("user-id", "https://example.com/checkout/");
+            fail("External checkout host must be rejected");
+        } catch (IllegalArgumentException expected) {}
+    }
+
     @Test public void refusesAnonymousCheckout() {
         for (String id : new String[] {null, "", "  "}) {
             try {
