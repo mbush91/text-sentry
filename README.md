@@ -2,7 +2,7 @@
 
 **Less noise. More signal.**
 
-TextSentry is an Android message assistant powered by **TypeSafe AI / Jev System One (`jev-latest`)**. The AI provider, endpoint and model are fixed by the app and **cannot be changed**. Each user enters their own TypeSafe API key, sets natural-language instructions and selects a minimum match probability (50–100%, default **95%**). Jev returns a yes probability, not free-form text. The fixed opt-out reply is **STOP**.
+TextSentry is an Android message assistant powered by **TypeSafe AI / Jev System One (`jev-latest`)**. The AI provider, endpoint and model are fixed by the app and **cannot be changed**. Each user enters their own TypeSafe API key, checks message categories, adds optional natural-language restrictions, and selects a minimum match probability (50–100%, default **95%**). Jev returns a yes probability, not free-form text. The fixed opt-out reply is **STOP**.
 
 Two distributions are maintained:
 
@@ -11,7 +11,19 @@ Two distributions are maintained:
 
 ## App experience
 
-The redesigned home screen shows TypeSafe connection readiness, monitoring status (sideload), active confidence setting and test/decision history. A separate **Settings** screen provides encrypted API-key entry/removal, prompt editing, confidence slider and privacy/data controls. Changing the policy invalidates queued SMS work, and upgrading from a legacy chat provider clears the old credential before any TypeSafe call.
+The redesigned home screen shows TypeSafe connection readiness, monitoring status (sideload), selected message categories, active confidence setting and test/decision history.
+
+### Message categories
+
+The Settings page provides three independent checkboxes:
+
+- **Go vote reminders** — unsolicited nonpartisan get-out-the-vote reminders.
+- **Political campaign messages** — unsolicited candidate, political party, fundraising and campaign appeals.
+- **Marketing ads** — unsolicited commercial promotions, coupons and advertisements.
+
+Marketing is checked by default to match the prior behavior; the two election-related categories start unchecked. Selected categories are combined using an **OR** into ONE Jev yes/no classification request per eligible, nonduplicate SMS, with the optional extra restrictions appended to that same instruction. There are no separate requests for each checked category. With none selected, analysis is skipped entirely.
+
+To qualify for a STOP reply, each selected category still requires a clear SMS **STOP** unsubscribe instruction. Official voter registration/polling place notices, personal texts, OTPs, and ambiguous texts remain excluded. This is opt-out filtering, not political messaging or voter outreach; no voter information is deleted and TextSentry never sends election content to others. A false positive may still occur, so use preview mode before allowing automatic replies. A separate **Settings** screen provides encrypted API-key entry/removal, category checkboxes, extra prompt editing, confidence slider and privacy/data controls. Changing the policy invalidates queued SMS work, and upgrading from a legacy chat provider clears the old credential before any TypeSafe call.
 
 **Message deletion:** Settings provides an immediate, confirmed **Clear local decision history** action and a full local data reset. These erase TextSentry records, **not original SMS in Android Messages**. Android only permits apps with appropriate default SMS handler privileges to delete inbox messages. TextSentry is not currently a full default SMS/MMS app, so automatic original-message deletion is intentionally unavailable.
 
