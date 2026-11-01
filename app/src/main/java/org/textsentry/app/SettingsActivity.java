@@ -93,10 +93,6 @@ public final class SettingsActivity extends Activity {
         politicalCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
         marketingCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
         updatePreview();
-            }
-            @Override public void afterTextChanged(Editable e) {}
-        });
-        updatePreview();
         confidenceLabel = UiKit.description(this, rules,
                 "Minimum approval probability: " + confidence + "%");
         SeekBar slider = new SeekBar(this);

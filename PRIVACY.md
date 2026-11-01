@@ -1,6 +1,6 @@
 # TextSentry Privacy Policy
 
-**Last updated:** October 31, 2026
+**Last updated:** November 1, 2026
 
 **App:** TextSentry (`org.textsentry.app`). This policy applies to both the Google Play edition and the separately distributed sideload edition.
 
@@ -20,6 +20,10 @@ TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not ha
 - The text you explicitly submit in the Play edition, or eligible SMS body and sender in the sideload edition when monitoring is on, is transmitted **to TypeSafe AI (Jev System One)** to obtain an evaluation. The provider and model are fixed in this version. The generic chat interface uses a placeholder sender number for manually submitted Play text.
 - The AI provider may process, store or retain submitted content in accordance with **its own privacy policy and terms**. Check those terms before sending private or sensitive text. Do not submit one-time codes, passwords or other sensitive content.
 - In the Play edition, text submitted with your per-message consent and its probability/suggestion are stored in TextSentry's encrypted local history. The number you enter to compose an SMS is passed only to the installed SMS app selected by Android. TextSentry cannot verify whether the SMS app actually sent the message. TextSentry does not send that number to the AI provider.
+
+## Optional developer diagnostics
+
+A hidden developer mode can be enabled by seven taps on the **AI connection** heading in Settings, followed by confirmation. When enabled, TextSentry retains at most five **complete model request and response JSON pairs** in an AES-256-GCM encrypted local store protected by Android Keystore. These diagnostic request bodies include the original analyzed SMS text and the selected categories and extra instructions; response bodies contain the raw TypeSafe API reply. API keys and HTTP authorization headers are not included. This happens only for analyses already requested or permitted by the user, and does not add any network transmission or analytics. Developer mode also permits editing additional natural-language classifier restrictions. Turning it off stops new tracing, but existing encrypted traces remain until you clear them in developer tools, clear history, or delete all app data.
 
 ## Your choices and consent
 

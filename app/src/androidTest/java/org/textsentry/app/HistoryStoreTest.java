@@ -63,8 +63,8 @@ public class HistoryStoreTest {
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
         HistoryStore store = new HistoryStore(app);
         store.clear();
-        String rawRequest = "{\\"state\\":\\"Private test SMS\\"}";
-        String rawResponse = "{\\"noul\\":0.97}";
+        String rawRequest = "Private test SMS";
+        String rawResponse = "Raw yes probability 0.97";
         for (int i = 0; i < HistoryStore.MAX_TRACES + 3; i++) {
             store.addTrace("sample", rawRequest + i, rawResponse);
         }
