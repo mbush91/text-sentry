@@ -57,6 +57,15 @@ public class AccountLoginTest {
         assertNull(ManagedKeyMemory.currentKey());
     }
 
+    @Test public void signOutInvalidatesInflightManagedKeyFetch() {
+        ManagedKeyMemory.clear();
+        long requestGeneration = ManagedKeyMemory.generation();
+        ManagedKeyMemory.clear(); // Signout while remote request was running.
+        assertFalse(ManagedKeyMemory.installIfUnchanged(
+                "synthetic-key", System.currentTimeMillis() + 60000, requestGeneration));
+        assertNull(ManagedKeyMemory.currentKey());
+    }
+
     @Test public void accountStoreRejectsIncompleteTokensAndCanClear() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         AuthSessionStore store = new AuthSessionStore(context);
