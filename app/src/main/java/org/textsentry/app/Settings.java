@@ -2,57 +2,94 @@ package org.textsentry.app;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import java.util.UUID;
 
-/** Non-secret on-device preferences; raw message bodies are never persisted. */
+/**
+ * Device-only configuration. Provider and model intentionally cannot be changed:
+ * this release sends AI requests exclusively to TypeSafe Jev latest.
+ */
 public final class Settings {
-    public static final String DEFAULT_ENDPOINT = "https://api.openai.com/v1/chat/completions";
-    public static final String DEFAULT_MODEL = "gpt-4.1-mini";
-    public static final String DEFAULT_PROMPT = "Only reply STOP to unmistakably opt-in marketing messages that explicitly describe a STOP unsubscribe option. Ignore personal messages, scams, transactional notices, and uncertainty.";
+    public static final String DEFAULT_ENDPOINT = SystemOneClient.ENDPOINT;
+    public static final String DEFAULT_MODEL = SystemOneClient.MODEL;
+    public static final String DEFAULT_PROMPT =
+            "Only reply STOP to unmistakably opt-in marketing messages that explicitly " +
+            "describe a STOP unsubscribe option. Ignore personal messages, scams, " +
+            "transactional notices, and uncertainty.";
+    public static final int DEFAULT_CONFIDENCE = 95;
     private final SharedPreferences prefs;
-
 
     public Settings(Context context) {
         prefs = context.getApplicationContext()
                 .getSharedPreferences("textsentry_settings", Context.MODE_PRIVATE);
+        // Never reuse an old chat-completions key with the new, fixed TypeSafe endpoint.
+        if (prefs.contains("system_one") && !prefs.getBoolean("system_one", false)) {
+            new KeyVault(context).clear();
+            prefs.edit().putBoolean("monitor", false).putBoolean("auto_send", false)
+                    .putBoolean("system_one", true)
+                    .putString("generation", UUID.randomUUID().toString()).commit();
+        }
     }
 
-    public String endpoint() { return prefs.getString("endpoint", DEFAULT_ENDPOINT); }
-    public String model() { return prefs.getString("model", DEFAULT_MODEL); }
+    public String endpoint() { return DEFAULT_ENDPOINT; }
+    public String model() { return DEFAULT_MODEL; }
+    public boolean systemOne() { return true; }
     public String prompt() { return prefs.getString("prompt", DEFAULT_PROMPT); }
-    public boolean systemOne() { return prefs.getBoolean("system_one", false); }
     public String cannedReply() { return prefs.getString("canned_reply", "STOP"); }
+    public int confidence() {
+        return Math.max(50, Math.min(100,
+                prefs.getInt("confidence_percent", DEFAULT_CONFIDENCE)));
+    }
     public boolean monitoring() { return prefs.getBoolean("monitor", false); }
     public boolean autoSend() { return prefs.getBoolean("auto_send", false); }
-    /** Changes on every save or pause to invalidate queued WorkManager SMS actions. */
     public String generation() { return prefs.getString("generation", "initial-disabled"); }
-
-    public void pause() {
-        prefs.edit().putBoolean("monitor", false)
-                .putBoolean("auto_send", false)
-                .putString("generation", java.util.UUID.randomUUID().toString()).commit();
-    }
     public String history() { return prefs.getString("history", "No decisions yet."); }
 
-    public void save(String endpoint, String model, String prompt, boolean monitoring, boolean autoSend) {
-        save(endpoint, model, prompt, monitoring, autoSend, systemOne(), cannedReply());
+    /** A policy change invalidates work that was queued using older rules. */
+    public void savePolicy(String prompt, int confidence, String fixedReply) {
+        if (prompt == null || prompt.trim().isEmpty() || prompt.length() > 3000) {
+            throw new IllegalArgumentException("Rules must be 1–3000 characters");
+        }
+        if (confidence < 50 || confidence > 100) {
+            throw new IllegalArgumentException("Confidence must be 50–100%");
+        }
+        if (!SystemOneClient.validReply(fixedReply)) {
+            throw new IllegalArgumentException("Invalid fixed reply");
+        }
+        if (!prefs.edit().putString("prompt", prompt.trim())
+                .putInt("confidence_percent", confidence)
+                .putString("canned_reply", fixedReply.trim())
+                .putBoolean("system_one", true)
+                .putString("generation", UUID.randomUUID().toString()).commit()) {
+            throw new IllegalStateException("Could not save policy");
+        }
     }
 
-    public void save(String endpoint, String model, String prompt, boolean monitoring,
-                     boolean autoSend, boolean useSystemOne, String cannedReply) {
-        prefs.edit().putString("endpoint", endpoint.trim())
-                .putString("model", model.trim())
-                .putString("prompt", prompt.trim())
-                .putBoolean("system_one", useSystemOne)
-                .putString("canned_reply", cannedReply)
-                .putBoolean("monitor", monitoring)
-                .putBoolean("auto_send", autoSend)
-                .putString("generation", java.util.UUID.randomUUID().toString()).commit();
+    /** Remains distinct from policy saves so toggling monitoring cannot change the AI model. */
+    public void setAutomation(boolean monitor, boolean send) {
+        prefs.edit().putBoolean("monitor", monitor)
+                .putBoolean("auto_send", monitor && send)
+                .putString("generation", UUID.randomUUID().toString()).commit();
     }
 
-    public synchronized void addHistory(String text) {
-        String cleaned = text.replace("\n", " ").replace("\r", " ");
+    public void pause() { setAutomation(false, false); }
+
+    /** Legacy wrapper retained for older tests/callers; provider and model are ignored. */
+    public void save(String endpoint, String model, String prompt, boolean monitor, boolean send) {
+        save(endpoint, model, prompt, monitor, send, true, "STOP");
+    }
+    public void save(String endpoint, String model, String prompt, boolean monitor,
+                     boolean send, boolean useSystemOne, String reply) {
+        savePolicy(prompt, confidence(), reply);
+        setAutomation(monitor, send);
+    }
+
+    public synchronized void addHistory(String description) {
+        String cleaned = description.replace("\r", " ").replace("\n", " ");
         String history = prefs.getString("history", "");
         String entry = java.time.LocalDateTime.now() + " " + cleaned + "\n" + history;
         prefs.edit().putString("history", entry.substring(0, Math.min(2400, entry.length()))).apply();
     }
+
+    /** Deletes TextSentry's local decision log only; never modifies the SMS inbox. */
+    public void clearHistory() { prefs.edit().remove("history").commit(); }
 }
