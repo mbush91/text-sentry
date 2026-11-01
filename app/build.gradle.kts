@@ -12,7 +12,7 @@ android {
         // GITHUB_RUN_ID is repository-wide, monotonically increasing and currently
         // safely fits in a 32-bit Android versionCode after dividing by 100.
         versionCode = System.getenv("GITHUB_RUN_ID")?.toLongOrNull()
-            ?.div(100)?.takeIf { it in 1..2147483647L }?.toInt()
+            ?.div(100)?.takeIf { it in 1L..Int.MAX_VALUE.toLong() }?.toInt()
             ?: (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
