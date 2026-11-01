@@ -25,8 +25,10 @@ public final class HistoryStore {
     private static final String PREF = "textsentry_message_history";
     private static final String ALIAS = "textsentry_message_history_aes_v1";
     private static final String DATA = "encrypted_records";
+    private static final String TRACES = "encrypted_traces";
     private static final Object LOCK = new Object();
     public static final int MAX_RECORDS = 100;
+    public static final int MAX_TRACES = 5; // Raw responses can be up to 64 KiB.
     private final SharedPreferences prefs;
 
     public static final class Entry {
@@ -50,6 +52,18 @@ public final class HistoryStore {
         }
     }
 
+    public static final class TraceEntry {
+        public final String source, request, response;
+        public final long timestamp;
+
+        private TraceEntry(JSONObject value) {
+            source = value.optString("source", "");
+            request = value.optString("request", "");
+            response = value.optString("response", "");
+            timestamp = value.optLong("timestamp", 0);
+        }
+    }
+
     public HistoryStore(Context context) {
         prefs = context.getApplicationContext().getSharedPreferences(PREF, Context.MODE_PRIVATE);
     }
@@ -69,8 +83,10 @@ public final class HistoryStore {
         return generator.generateKey();
     }
 
-    private JSONArray readRecords() throws Exception {
-        String saved = prefs.getString(DATA, "");
+    private JSONArray readRecords() throws Exception { return readRecords(DATA); }
+
+    private JSONArray readRecords(String slot) throws Exception {
+        String saved = prefs.getString(slot, "");
         if (saved.isEmpty()) return new JSONArray();
         if (saved.length() > 600000) throw new IllegalStateException("Invalid history size");
         String[] fields = saved.split(":", 2);
@@ -82,13 +98,15 @@ public final class HistoryStore {
         return new JSONArray(new String(plaintext, StandardCharsets.UTF_8));
     }
 
-    private void writeRecords(JSONArray records) throws Exception {
+    private void writeRecords(JSONArray records) throws Exception { writeRecords(DATA, records); }
+
+    private void writeRecords(String slot, JSONArray records) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, key());
         String encoded = Base64.encodeToString(cipher.getIV(), Base64.NO_WRAP) + ":" +
                 Base64.encodeToString(cipher.doFinal(
                         records.toString().getBytes(StandardCharsets.UTF_8)), Base64.NO_WRAP);
-        if (!prefs.edit().putString(DATA, encoded).commit()) {
+        if (!prefs.edit().putString(slot, encoded).commit()) {
             throw new IllegalStateException("Could not persist message history");
         }
     }
@@ -141,6 +159,44 @@ public final class HistoryStore {
             List<Entry> list = new ArrayList<>();
             for (int i = 0; i < records.length(); i++) list.add(new Entry(records.getJSONObject(i)));
             return list;
+        }
+    }
+
+    /** A short, encrypted diagnostic ring; never includes HTTP Authorization headers. */
+    public void addTrace(String source, String request, String response) throws Exception {
+        if (!("sms".equals(source) || "sample".equals(source) || "manual".equals(source))
+                || request == null || request.isEmpty() || request.length() > 12000
+                || response == null || response.length() > 65536) {
+            throw new IllegalArgumentException("Invalid model trace");
+        }
+        JSONObject item = new JSONObject().put("timestamp", System.currentTimeMillis())
+                .put("source", source).put("request", request).put("response", response);
+        synchronized (LOCK) {
+            JSONArray existing = readRecords(TRACES);
+            JSONArray latest = new JSONArray().put(item);
+            for (int i = 0; i < existing.length() && i < MAX_TRACES - 1; i++) {
+                latest.put(existing.getJSONObject(i));
+            }
+            writeRecords(TRACES, latest);
+        }
+    }
+
+    public List<TraceEntry> traces() throws Exception {
+        synchronized (LOCK) {
+            JSONArray entries = readRecords(TRACES);
+            List<TraceEntry> result = new ArrayList<>();
+            for (int i = 0; i < entries.length(); i++) {
+                result.add(new TraceEntry(entries.getJSONObject(i)));
+            }
+            return result;
+        }
+    }
+
+    public void clearTraces() {
+        synchronized (LOCK) {
+            if (!prefs.edit().remove(TRACES).commit()) {
+                throw new IllegalStateException("Could not clear model traces");
+            }
         }
     }
 

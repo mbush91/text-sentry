@@ -58,6 +58,15 @@ public final class Settings {
     public boolean monitoring() { return prefs.getBoolean("monitor", false); }
     public boolean autoSend() { return prefs.getBoolean("auto_send", false); }
     public String generation() { return prefs.getString("generation", "initial-disabled"); }
+
+    /** Hidden diagnostics are an explicit, persistent local opt-in, never a build flag. */
+    public boolean developerMode() { return prefs.getBoolean("developer_mode", false); }
+
+    public void setDeveloperMode(boolean enabled) {
+        if (!prefs.edit().putBoolean("developer_mode", enabled).commit()) {
+            throw new IllegalStateException("Could not update developer mode");
+        }
+    }
     public String history() { return prefs.getString("history", "No decisions yet."); }
 
     /** A policy change invalidates work that was queued using older rules. */
