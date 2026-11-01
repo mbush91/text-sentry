@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <uses-permission android:name="android.permission.INTERNET" />
     <application
@@ -10,6 +11,17 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
+        <activity android:name=".AccountActivity" android:exported="false" />
+        <activity android:name="net.openid.appauth.RedirectUriReceiverActivity"
+            android:exported="true" tools:node="replace">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="textsentry" android:host="auth"
+                    android:path="/callback" />
+            </intent-filter>
+        </activity>
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".DeveloperActivity" android:exported="false" />
         <activity android:name=".HistoryActivity" android:exported="false" />
