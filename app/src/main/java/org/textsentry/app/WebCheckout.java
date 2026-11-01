@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.io.UnsupportedEncodingException;
 
 /** Identified-user RevenueCat checkout for the independent sideload edition.
  * Never uses an email address, Google token, SMS content, or anonymous identity as the buyer ID.
@@ -32,8 +33,11 @@ final class WebCheckout {
                 "https://pay[.]rev[.]cat/[A-Za-z0-9_/-]+/")) {
             throw new IllegalArgumentException("Invalid checkout host");
         }
-        return checkoutBaseUrl + URLEncoder.encode(userId, StandardCharsets.UTF_8)
-                .replace("+", "%20");
+        try {
+            return checkoutBaseUrl + URLEncoder.encode(userId, "UTF-8").replace("+", "%20");
+        } catch (UnsupportedEncodingException impossible) {
+            throw new IllegalStateException("UTF-8 encoding unavailable");
+        }
     }
 
     /** Parse identity derived from the backend-validated Cognito JWT, not a client-supplied ID. */
