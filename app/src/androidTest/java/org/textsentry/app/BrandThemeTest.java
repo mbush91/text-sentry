@@ -35,6 +35,10 @@ public class BrandThemeTest {
 
     @Test public void launchWindowAndScrolledScreensUseReadableSystemBars() {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        // MainActivity is protected; use a synthetic encrypted BYOK key to test
+        // its visual system bars without bypassing the onboarding gate.
+        KeyVault vault = new KeyVault(context);
+        vault.save("synthetic-theme-test");
         Intent intent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Activity activity = InstrumentationRegistry.getInstrumentation().startActivitySync(intent);
@@ -75,6 +79,7 @@ public class BrandThemeTest {
             }
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(activity::finish);
+            vault.clear();
         }
     }
 }
