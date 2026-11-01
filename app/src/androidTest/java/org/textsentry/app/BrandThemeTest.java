@@ -37,6 +37,7 @@ public class BrandThemeTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         // MainActivity is protected; use a synthetic encrypted BYOK key to test
         // its visual system bars without bypassing the onboarding gate.
+        new Settings(context); // Apply legacy-migration before the synthetic key.
         KeyVault vault = new KeyVault(context);
         vault.save("synthetic-theme-test");
         Intent intent = new Intent(context, MainActivity.class)
