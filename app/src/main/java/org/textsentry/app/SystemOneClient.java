@@ -79,16 +79,33 @@ public final class SystemOneClient {
 
     public AiDecision decide(String apiKey, String model, String userRule,
                              String message, String cannedReply, double threshold) throws Exception {
+        return evaluate(apiKey, model, userRule, message, cannedReply, threshold).decision;
+    }
+
+    /** The very same provider response supplies the verdict and its exact yes probability. */
+    public static final class Evaluation {
+        public final AiDecision decision;
+        public final double confidence;
+        private Evaluation(AiDecision decision, double confidence) {
+            this.decision = decision;
+            this.confidence = confidence;
+        }
+    }
+
+    public Evaluation evaluate(String apiKey, String model, String userRule,
+                               String message, String cannedReply, double threshold) throws Exception {
         if (!Double.isFinite(threshold) || threshold < 0.50 || threshold > 1.0) {
             throw new IllegalArgumentException("Confidence threshold must be 50–100%");
         }
         if (!validReply(cannedReply)) {
             throw new IllegalArgumentException("Invalid configured reply");
         }
-        boolean approved = score(apiKey, model, userRule, message) >= threshold;
+        double confidence = score(apiKey, model, userRule, message);
+        boolean approved = confidence >= threshold;
         // User-selected reply only; never send message text from an LLM response.
-        return AiDecision.parse(new JSONObject().put("should_reply", approved)
+        AiDecision decision = AiDecision.parse(new JSONObject().put("should_reply", approved)
                 .put("reply", approved ? cannedReply.trim() : "").toString());
+        return new Evaluation(decision, confidence);
     }
 
     public static boolean validReply(String reply) {

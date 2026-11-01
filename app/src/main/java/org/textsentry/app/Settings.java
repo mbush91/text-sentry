@@ -19,9 +19,11 @@ public final class Settings {
             "transactional notices, and uncertainty.";
     public static final int DEFAULT_CONFIDENCE = 95;
     private final SharedPreferences prefs;
+    private final Context appContext;
 
     public Settings(Context context) {
-        prefs = context.getApplicationContext()
+        appContext = context.getApplicationContext();
+        prefs = appContext
                 .getSharedPreferences("textsentry_settings", Context.MODE_PRIVATE);
         // Never reuse an old chat-completions key with the new, fixed TypeSafe endpoint.
         if (prefs.contains("system_one") && !prefs.getBoolean("system_one", false)) {
@@ -113,5 +115,8 @@ public final class Settings {
     }
 
     /** Deletes TextSentry's local decision log only; never modifies the SMS inbox. */
-    public void clearHistory() { prefs.edit().remove("history").commit(); }
+    public void clearHistory() {
+        new HistoryStore(appContext).clear();
+        prefs.edit().remove("history").commit();
+    }
 }

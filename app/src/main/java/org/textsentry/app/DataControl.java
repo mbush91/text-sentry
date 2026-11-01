@@ -12,8 +12,14 @@ public final class DataControl {
         new Settings(context).pause();
         WorkManager.getInstance(context).cancelAllWork();
         new KeyVault(context).clear();
+        // Wipe the encrypted message archive and its Android Keystore key as well.
+        try {
+            new HistoryStore(context).deleteAll();
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not erase encrypted message history", e);
+        }
         for (String name : new String[] {"textsentry_settings", "textsentry_reply_ledger",
-                "textsentry_secrets"}) {
+                "textsentry_secrets", "textsentry_message_history"}) {
             context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit();
         }
     }

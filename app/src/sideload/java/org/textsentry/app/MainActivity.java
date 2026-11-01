@@ -68,6 +68,25 @@ public final class MainActivity extends Activity {
         UiKit.button(this, rule, "Open settings  →", false, () ->
                 startActivity(new Intent(this, SettingsActivity.class)));
 
+        LinearLayout permissions = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, permissions, "SMS permissions");
+        boolean canReceive = checkSelfPermission(Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        boolean canSend = checkSelfPermission(Manifest.permission.SEND_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+        UiKit.description(this, permissions,
+                "Receive incoming SMS: " + (canReceive ? "Granted" : "Not granted"));
+        if (!canReceive) UiKit.button(this, permissions, "Allow SMS monitoring", false,
+                () -> requestPermissions(new String[]{Manifest.permission.RECEIVE_SMS}, 102));
+        UiKit.description(this, permissions,
+                "Send SMS: " + (canSend ? "Granted" : "Not granted"));
+        if (!canSend) UiKit.button(this, permissions, "Allow SMS sending", false,
+                () -> requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 103));
+        UiKit.description(this, permissions,
+                "Sending remains OFF until you separately enable auto-replies. " +
+                "Original SMS deletion requires a complete default SMS app; " +
+                "TextSentry does not request that role or delete inbox messages.");
+
         LinearLayout preview = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, preview, "Test a message");
         UiKit.description(this, preview, "Try a sample safely. Testing never sends a real SMS.");
@@ -100,10 +119,12 @@ public final class MainActivity extends Activity {
             new Thread(() -> {
                 String answer;
                 try {
-                    AiDecision decision = new SystemOneClient().decide(
+                    SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
                             vault.read(), SystemOneClient.MODEL, ruleText,
                             content, "STOP", threshold / 100.0);
-                    answer = decision.shouldReply ? "Suggested reply: STOP" : "No reply suggested.";
+                    answer = (evaluation.decision.shouldReply ? "Suggested reply: STOP" :
+                            "No reply suggested.") + " Jev match: " +
+                            Math.round(evaluation.confidence * 100) + "%.";
                 } catch (Exception ex) {
                     answer = "Unable to evaluate. Check your API key or connection.";
                 }
@@ -113,10 +134,14 @@ public final class MainActivity extends Activity {
         });
 
         LinearLayout recent = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, recent, "Recent decisions");
-        UiKit.description(this, recent, settings.history());
-        UiKit.button(this, recent, "Refresh activity", false, this::showHome);
-        UiKit.description(this, recent, "Local decisions only. Clear history in Settings.");
+        UiKit.heading(this, recent, "Message history");
+        UiKit.description(this, recent,
+                "Read the original messages TextSentry evaluated, the model match probability, " +
+                "whether STOP was actually sent, and whether TextSentry deleted the SMS.");
+        UiKit.button(this, recent, "View message history  →", true, () ->
+                startActivity(new Intent(this, HistoryActivity.class)));
+        UiKit.description(this, recent,
+                "Sensitive history stays encrypted on this device; no inbox deletion is performed.");
     }
 
     private void startPreview() {
@@ -159,7 +184,9 @@ public final class MainActivity extends Activity {
             settings.setAutomation(true, false);
         } else if (requestCode == 101 && granted && settings.monitoring()) {
             settings.setAutomation(true, true);
-        } else {
+        } else if ((requestCode == 102 || requestCode == 103) && !granted) {
+            Toast.makeText(this, "Permission denied. No changes made.", Toast.LENGTH_LONG).show();
+        } else if ((requestCode == 100 || requestCode == 101) && !granted) {
             Toast.makeText(this, "Permission not granted. No change made.", Toast.LENGTH_LONG).show();
         }
         showHome();

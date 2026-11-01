@@ -110,6 +110,8 @@ public final class SettingsActivity extends Activity {
         UiKit.heading(this, delete, "Messages & storage");
         UiKit.description(this, delete,
                 "Clear TextSentry's local decision history at any time. This does not delete SMS from your messaging inbox.");
+        UiKit.button(this, delete, "View message history", false, () ->
+                startActivity(new Intent(this, HistoryActivity.class)));
         UiKit.button(this, delete, "Clear local decision history", false, () ->
                 new AlertDialog.Builder(this)
                         .setTitle("Clear activity history?")
