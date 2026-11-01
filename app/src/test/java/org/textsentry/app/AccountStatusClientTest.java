@@ -11,7 +11,7 @@ public class AccountStatusClientTest {
         assertFalse(beta.subscribed());
 
         AccountStatusClient.Status subscribed = AccountStatusClient.parse(
-                "{\"user_id\":\"cognito-sub\",\"managed_access\":true,\"subscription_required\":false,\"subscription_status\":\"active\"}");
+                "{\"user_id\":\"cognito-sub\",\"managed_access\":true,\"subscription_required\":false,\"subscription_status\":\"active\",\"subscription_sandbox\":true}");
         assertTrue(subscribed.subscribed());
         assertEquals("TextSentry subscription active (sandbox)", subscribed.label(true));
     }
@@ -47,6 +47,34 @@ public class AccountStatusClientTest {
                 "{\"user_id\":\"cognito-123\",\"subscription_status\":\"inactive\","
                 + "\"subscription_reason\":\"missing_entitlement\"}");
         assertEquals("Purchase is missing the textsentry entitlement", missing.label(true));
+    }
+
+    @Test public void productionNeverTreatsSandboxAsPaid() {
+        AccountStatusClient.Status sandbox = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":true}");
+        assertTrue(sandbox.subscribed());
+        assertFalse(sandbox.subscriptionValidForBuild(false));
+        assertTrue(sandbox.subscriptionValidForBuild(true));
+        assertEquals("Sandbox subscription only — live subscription required",
+                sandbox.label(false));
+        assertEquals("TextSentry subscription active (sandbox)", sandbox.label(true));
+    }
+
+    @Test public void livePurchaseWorksForEitherSideloadBuild() {
+        AccountStatusClient.Status live = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":false}");
+        assertTrue(live.subscriptionValidForBuild(false));
+        assertTrue(live.subscriptionValidForBuild(true));
+        assertEquals("TextSentry subscription active", live.label(false));
+    }
+
+    @Test public void unknownPurchaseEnvironmentIsNotVerifiedForProduction() {
+        AccountStatusClient.Status legacy = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\"}");
+        assertFalse(legacy.subscriptionValidForBuild(false));
+        assertEquals("Subscription environment unavailable", legacy.label(false));
     }
 
     @Test public void unsupportedResponseIsRejected() {

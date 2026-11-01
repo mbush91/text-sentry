@@ -118,7 +118,8 @@ public final class AccountActivity extends Activity {
                             accountId.setText("RevenueCat customer ID: " + verified.userId);
                         }
                         if (subscribeButton != null) {
-                            boolean active = verified != null && verified.subscribed();
+                            boolean active = verified != null
+                                    && verified.subscriptionValidForBuild(sandbox);
                             subscribeButton.setEnabled(!active);
                             subscribeButton.setText(active
                                     ? "Subscription active" : "Subscribe to TextSentry");
