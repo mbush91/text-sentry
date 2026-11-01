@@ -8,6 +8,7 @@ package org.textsentry.app;
 final class ManagedKeyMemory {
     private static String key;
     private static long expiresAtMillis;
+    private static long generation;
     private ManagedKeyMemory() {}
 
     static synchronized void install(String newKey, long expiry) {
@@ -26,10 +27,20 @@ final class ManagedKeyMemory {
         return key;
     }
 
+    static synchronized long generation() { return generation; }
+
+    /** A signed-out session must never repopulate RAM from an in-flight request. */
+    static synchronized boolean installIfUnchanged(String newKey, long expiry, long expected) {
+        if (generation != expected) return false;
+        install(newKey, expiry);
+        return true;
+    }
+
     static synchronized boolean hasActiveKey() { return currentKey() != null; }
 
     static synchronized void clear() {
         key = null;
         expiresAtMillis = 0;
+        generation++;
     }
 }

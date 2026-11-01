@@ -42,15 +42,31 @@ public final class AccountActivity extends Activity {
     }
 
     private void render() {
-        LinearLayout root = UiKit.screen(this, "Your TextSentry account.", true);
+        boolean welcome = getIntent().getBooleanExtra("welcome", false);
+        LinearLayout root = UiKit.screen(this,
+                welcome ? "Block the noise. Start with Google." : "Your TextSentry account.", !welcome);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, card, "Google account");
+        UiKit.heading(this, card, welcome ? "Sign in or create an account" : "Google account");
         UiKit.description(this, card,
                 "Create an account or sign in with Google. Authentication uses " +
                 "Cognito's secure browser sign-in; TextSentry never sees your Google password.");
         status = UiKit.description(this, card, "");
         refreshStatus();
-        UiKit.button(this, card, "Continue with Google", true, this::startLogin);
+        UiKit.button(this, card, sessions.hasSession() ? "Switch Google account"
+                : "Continue with Google", true, this::startLogin);
+        if (welcome && !sessions.hasSession()) {
+            TextView skip = UiKit.description(this, card,
+                    "Skip sign-up · Bring your own key");
+            skip.setTextSize(12);
+            skip.setPaintFlags(skip.getPaintFlags()
+                    | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
+            skip.setContentDescription("Skip sign-up and bring your own TypeSafe key");
+            skip.setOnClickListener(v -> {
+                Onboarding.complete(this);
+                startActivity(new Intent(this, SettingsActivity.class));
+                finish();
+            });
+        }
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Sign out on this device", false, () ->
                     new AlertDialog.Builder(this)
@@ -60,6 +76,7 @@ public final class AccountActivity extends Activity {
                             .setPositiveButton("Sign out", (dialog, which) -> {
                                 try {
                                     authGeneration++;
+                                    new Settings(this).pause();
                                     ManagedKeyMemory.clear();
                                     sessions.clear();
                                     render();
@@ -74,12 +91,12 @@ public final class AccountActivity extends Activity {
         UiKit.heading(this, info, "Private by design");
         UiKit.description(this, info,
                 "Google sign-in creates your TextSentry account. No SMS content is sent to " +
-                "TextSentry's AWS service. Current SMS classification still uses your " +
-                "TypeSafe BYOK key; managed OpenRouter access is currently separate.");
+                "TextSentry's AWS service. Signed-in accounts use the $1/month " +
+                "OpenRouter key with Jev. Or use your own TypeSafe key without signing up.");
         UiKit.description(this, info,
                 "Account tokens are encrypted using Android Keystore and cleared on sign-out " +
                 "or Delete all app data. Your managed OpenRouter key is fetched only into " +
-                "RAM and disappears on process restart or sign-out.");
+                "RAM and disappears on process restart or sign-out. Signing out pauses monitoring.");
         UiKit.button(this, info, "Refresh managed key", false, this::fetchManagedKey);
     }
 
@@ -100,6 +117,7 @@ public final class AccountActivity extends Activity {
 
     private void startLogin() {
         authGeneration++;
+        new Settings(this).pause(); // Don't keep queued SMS work across account switches.
         ManagedKeyMemory.clear();
         status.setText("Connecting securely to TextSentry…");
         new Thread(() -> {
@@ -248,6 +266,7 @@ public final class AccountActivity extends Activity {
                         } else {
                             ManagedKeyMemory.install(fetched.key, fetched.expiresAtMillis);
                             status.setText(fetched.status());
+                            if (getIntent().getBooleanExtra("welcome", false)) finish();
                         }
                     });
                 }, "textsentry-managed-key").start();

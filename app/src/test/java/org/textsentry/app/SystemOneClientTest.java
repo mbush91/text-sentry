@@ -17,6 +17,41 @@ public class SystemOneClientTest {
                 .toString();
     }
 
+    @Test public void managedOpenRouterUsesJevDecisionsApiNotChatCompletions() throws Exception {
+        String[] observed = new String[3];
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            observed[0] = url;
+            observed[1] = key;
+            observed[2] = body;
+            return result(0.97);
+        });
+        SystemOneClient.Evaluation evaluation = client.evaluateManaged(
+                "managed-test-key", PROMPT, MESSAGE, "STOP", 0.95, null);
+        assertEquals("https://openrouter.ai/api/alpha/decisions", observed[0]);
+        assertEquals("managed-test-key", observed[1]);
+        JSONObject payload = new JSONObject(observed[2]);
+        assertEquals("~typesafe/jev-latest", payload.getString("model"));
+        assertEquals(MESSAGE, payload.getString("state"));
+        assertEquals(1, payload.getJSONObject("questions").length());
+        assertEquals("noul", payload.getJSONObject("questions").getJSONObject("reply").getString("type"));
+        assertTrue(evaluation.decision.shouldReply);
+        assertEquals(0.97, evaluation.confidence, 0.00001);
+    }
+
+    @Test public void managedOpenRouterPreservesFailClosedAndTraceBehavior() throws Exception {
+        String[] captured = new String[2];
+        SystemOneClient client = new SystemOneClient((url, key, body) -> result(0.83));
+        SystemOneClient.Evaluation evaluation = client.evaluateManaged("managed-test-key",
+                PROMPT, MESSAGE, "STOP", 0.95, (request, response) -> {
+                    captured[0] = request;
+                    captured[1] = response;
+                });
+        assertFalse(evaluation.decision.shouldReply);
+        assertFalse(captured[0].contains("managed-test-key"));
+        assertTrue(captured[0].contains(MESSAGE));
+        assertTrue(captured[1].contains("answers"));
+    }
+
     @Test public void sendsCorrectTypedQuestionAndKeepsInboundSmsAsData() throws Exception {
         String[] observed = new String[3];
         SystemOneClient client = new SystemOneClient((url, key, body) -> {

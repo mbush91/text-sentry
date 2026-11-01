@@ -34,9 +34,10 @@ public final class SettingsActivity extends Activity {
         root = UiKit.screen(this, "Your rules. Your decisions.", true);
         LinearLayout account = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, account, "TextSentry account");
+        UiKit.description(this, account, AnalysisAccess.status(this));
         UiKit.description(this, account,
-                "Create an account or sign in securely with Google. This does not change your " +
-                "current TypeSafe key or enable automatic replies.");
+                "Google sign-in uses a $1/month managed Jev key. " +
+                "Otherwise you can use your own TypeSafe key below.");
         UiKit.button(this, account, "Sign in / Manage account", false, () ->
                 startActivity(new Intent(this, AccountActivity.class)));
 
@@ -60,7 +61,8 @@ public final class SettingsActivity extends Activity {
             }
         });
         UiKit.description(this, provider,
-                "TypeSafe AI · System One. Your key is encrypted on this device.");
+                "Optional: bring your own TypeSafe key without an account. " +
+                "Saved only on this device. Google sign-in takes priority if connected.");
         UiKit.chip(this, provider, "✓ Jev · latest model");
         apiKey = UiKit.input(this, provider, "API key", "", false, true);
         apiKey.setHint("Paste your TypeSafe API key");
@@ -187,7 +189,7 @@ public final class SettingsActivity extends Activity {
     private void refreshKey() {
         keyState.setText(vault.hasKey()
                 ? "● API key saved securely. Leave the field empty to keep it."
-                : "○ No API key saved. Add one to enable analysis.");
+                : "○ No BYOK key saved. Google sign-in works without one.");
     }
 
     private void save() {

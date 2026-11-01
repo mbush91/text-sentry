@@ -34,9 +34,8 @@ public final class SmsWorker extends Worker {
                 settings.addHistory("Ignored (no categories selected)");
                 return Result.success();
             }
-            String key = new KeyVault(context).read();
-            if (key.isEmpty()) {
-                settings.addHistory("Skipped (API key missing)");
+            if (!AnalysisAccess.hasProvider(context)) {
+                settings.addHistory("Skipped (sign-in or API key needed)");
                 return Result.success();
             }
             ReplyLedger ledger = new ReplyLedger(context);
@@ -45,9 +44,8 @@ public final class SmsWorker extends Worker {
                 return Result.success();
             }
 
-            SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
-                    key, SystemOneClient.MODEL, combinedInstructions,
-                    message, "STOP", settings.confidence() / 100.0,
+            SystemOneClient.Evaluation evaluation = AnalysisAccess.evaluate(context,
+                    combinedInstructions, message, settings.confidence() / 100.0,
                     DeveloperMode.traceSink(context, "sms"));
             if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
                 return Result.success();

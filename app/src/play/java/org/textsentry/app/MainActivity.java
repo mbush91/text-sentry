@@ -10,6 +10,7 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         refresh();
+        Onboarding.offer(this);
     }
 
     @Override protected void onResume() {
