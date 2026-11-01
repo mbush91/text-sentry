@@ -13,7 +13,7 @@ public final class PlayUi {
     private PlayUi() {}
 
     public static void show(Activity activity, Settings settings, KeyVault vault) {
-        LinearLayout root = UiKit.screen(activity, "Less noise. More signal.", false);
+        LinearLayout root = UiKit.screen(activity, "Less spam. More control.", false);
 
         LinearLayout intro = UiKit.card(activity, root, UiKit.HIGHLIGHT);
         UiKit.heading(activity, intro, "Message review");
