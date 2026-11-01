@@ -55,6 +55,14 @@ final class WebCheckout {
 
     /** Only call on a background thread; the authenticated account endpoint returns no SMS. */
     static String fetchUserId(String accessToken) throws IOException {
+        try {
+            return userIdFromAccount(fetchAccount(accessToken));
+        } catch (IllegalArgumentException bad) {
+            throw new IOException("Invalid account response");
+        }
+    }
+
+    static String fetchAccount(String accessToken) throws IOException {
         if (accessToken == null || accessToken.isBlank()) {
             throw new IOException("Sign in again before subscribing.");
         }
@@ -82,11 +90,7 @@ final class WebCheckout {
                     buffer.write(chunk, 0, count);
                 }
             }
-            try {
-                return userIdFromAccount(new String(buffer.toByteArray(), StandardCharsets.UTF_8));
-            } catch (IllegalArgumentException ignored) {
-                throw new IOException("Invalid account response");
-            }
+            return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
         } finally {
             connection.disconnect();
         }
