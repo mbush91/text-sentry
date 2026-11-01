@@ -18,9 +18,8 @@ public final class PlayUi {
         LinearLayout intro = UiKit.card(activity, root, UiKit.HIGHLIGHT);
         UiKit.heading(activity, intro, "A calmer way to message");
         UiKit.description(activity, intro,
-                "Review the texts you choose with TypeSafe AI. Nothing is analyzed until you ask.");
-        UiKit.chip(activity, intro, vault.hasKey() ? "● TypeSafe ready · Jev latest"
-                : "○ TypeSafe setup needed");
+                "Review only the texts you choose. Nothing is analyzed until you ask.");
+        UiKit.chip(activity, intro, AnalysisAccess.status(activity));
         UiKit.button(activity, intro, "View history  →", false, () ->
                 activity.startActivity(new Intent(activity, HistoryActivity.class)));
         UiKit.button(activity, intro, "Google account / Sign up  →", false, () ->
@@ -42,13 +41,14 @@ public final class PlayUi {
         }
         EditText message = UiKit.input(activity, review, "Message", incoming, true, false);
         CheckBox consent = new CheckBox(activity);
-        consent.setText("I agree to send this message to TypeSafe AI for this analysis. TypeSafe's privacy terms apply.");
+        consent.setText("I agree to send this text directly to TypeSafe Jev " +
+                "(through OpenRouter when signed in). Provider privacy terms apply.");
         consent.setChecked(false);
         review.addView(consent);
         TextView outcome = UiKit.description(activity, review,
                 "Ready when you are. This app never monitors or sends SMS automatically.");
         EditText response = UiKit.input(activity, review, "Suggested reply (editable)", "", true, false);
-        UiKit.button(activity, review, "Analyze with TypeSafe", true, () -> {
+        UiKit.button(activity, review, "Analyze message", true, () -> {
             if (!consent.isChecked()) {
                 outcome.setText("Please consent to this analysis first.");
                 return;
@@ -58,8 +58,8 @@ public final class PlayUi {
                 outcome.setText("This text is blocked by local safety rules.");
                 return;
             }
-            if (!vault.hasKey()) {
-                outcome.setText("Add your TypeSafe API key in Settings first.");
+            if (!AnalysisAccess.hasProvider(activity)) {
+                outcome.setText("Sign in or bring your own key to analyze.");
                 return;
             }
             final String policy;
@@ -75,12 +75,12 @@ public final class PlayUi {
             }
             final double threshold = settings.confidence() / 100.0;
             consent.setChecked(false);
-            outcome.setText("Analyzing with TypeSafe…");
+            outcome.setText("Analyzing with Jev…");
             new Thread(() -> {
                 String status, suggestion;
                 try {
-                    SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
-                            vault.read(), SystemOneClient.MODEL, policy, input, "STOP", threshold,
+                    SystemOneClient.Evaluation evaluation = AnalysisAccess.evaluate(activity,
+                            policy, input, threshold,
                             DeveloperMode.traceSink(activity, "manual"));
                     AiDecision answer = evaluation.decision;
                     new HistoryStore(activity).add("Manual review", input, evaluation.confidence,
@@ -92,7 +92,7 @@ public final class PlayUi {
                             : "No reply recommended (" + Math.round(evaluation.confidence * 100) + "%).";
                     suggestion = answer.shouldReply ? "STOP" : "";
                 } catch (Exception ignored) {
-                    status = "Analysis failed. Check your API key or connection.";
+                    status = "Analysis failed. Check your account/key or connection.";
                     suggestion = "";
                 }
                 String result = status, draft = suggestion;
