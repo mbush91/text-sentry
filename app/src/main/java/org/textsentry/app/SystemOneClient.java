@@ -16,6 +16,8 @@ import javax.net.ssl.HttpsURLConnection;
 public final class SystemOneClient {
     public static final String ENDPOINT = "https://api.typesafe.ai/v1/systemone";
     public static final String MODEL = "jev-latest";
+    public static final String OPENROUTER_ENDPOINT = "https://openrouter.ai/api/alpha/decisions";
+    public static final String OPENROUTER_MODEL = "~typesafe/jev-latest";
     public static final double APPROVAL_THRESHOLD = 0.95;
 
     /** Injectable transport keeps every PR test offline and deterministic. */
@@ -42,7 +44,13 @@ public final class SystemOneClient {
 
     private double score(String apiKey, String model, String userRule, String message,
                          TraceSink trace) throws Exception {
-        if (isEmpty(apiKey) || !MODEL.equals(model) || isEmpty(userRule) || isEmpty(message)) {
+        return scoreConfigured(apiKey, model, ENDPOINT, MODEL, userRule, message, trace);
+    }
+
+    private double scoreConfigured(String apiKey, String model, String endpoint,
+                                   String expectedModel, String userRule, String message,
+                                   TraceSink trace) throws Exception {
+        if (isEmpty(apiKey) || !expectedModel.equals(model) || isEmpty(userRule) || isEmpty(message)) {
             throw new IllegalArgumentException("Missing System One settings");
         }
         if (message.length() > 1600 || userRule.length() > 3000) {
@@ -57,13 +65,13 @@ public final class SystemOneClient {
                         + "If unsure, answer NO. Apply the following owner rule: " + userRule)
                 .put("criteria", criteria);
         JSONObject request = new JSONObject()
-                .put("model", MODEL)
+                .put("model", expectedModel)
                 .put("state", message)
                 .put("questions", new JSONObject().put("reply", question));
         final String body = request.toString();
         String raw = "";
         try {
-            raw = transport.post(ENDPOINT, apiKey.trim(), body);
+            raw = transport.post(endpoint, apiKey.trim(), body);
         } finally {
             // An optional local diagnostic must never change a provider decision or
             // expose the key. Transport failure has an empty response by design.
@@ -126,7 +134,30 @@ public final class SystemOneClient {
         if (!validReply(cannedReply)) {
             throw new IllegalArgumentException("Invalid configured reply");
         }
-        double confidence = score(apiKey, model, userRule, message, trace);
+        return evaluateConfigured(apiKey, model, ENDPOINT, MODEL, userRule,
+                message, cannedReply, threshold, trace);
+    }
+
+    /** Same Jev typed decision through OpenRouter, with a RAM-only managed credential. */
+    public Evaluation evaluateManaged(String managedKey, String userRule, String message,
+                                      String cannedReply, double threshold, TraceSink trace)
+            throws Exception {
+        return evaluateConfigured(managedKey, OPENROUTER_MODEL, OPENROUTER_ENDPOINT,
+                OPENROUTER_MODEL, userRule, message, cannedReply, threshold, trace);
+    }
+
+    private Evaluation evaluateConfigured(String apiKey, String model, String endpoint,
+                                          String expectedModel, String userRule,
+                                          String message, String cannedReply, double threshold,
+                                          TraceSink trace) throws Exception {
+        if (!Double.isFinite(threshold) || threshold < 0.50 || threshold > 1.0) {
+            throw new IllegalArgumentException("Confidence threshold must be 50–100%");
+        }
+        if (!validReply(cannedReply)) {
+            throw new IllegalArgumentException("Invalid configured reply");
+        }
+        double confidence = scoreConfigured(apiKey, model, endpoint, expectedModel,
+                userRule, message, trace);
         boolean approved = confidence >= threshold;
         // User-selected reply only; never send message text from an LLM response.
         AiDecision decision = AiDecision.parse(new JSONObject().put("should_reply", approved)
