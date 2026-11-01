@@ -21,7 +21,18 @@ final class WebCheckout {
         if (userId == null || userId.isBlank() || userId.length() > 256) {
             throw new IllegalArgumentException("Missing customer identity");
         }
-        return CHECKOUT + URLEncoder.encode(userId, StandardCharsets.UTF_8)
+        return purchaseUrl(userId, CHECKOUT);
+    }
+
+    static String purchaseUrl(String userId, String checkoutBaseUrl) {
+        if (userId == null || userId.isBlank() || userId.length() > 256) {
+            throw new IllegalArgumentException("Missing customer identity");
+        }
+        if (checkoutBaseUrl == null || !checkoutBaseUrl.matches(
+                "https://pay[.]rev[.]cat/[A-Za-z0-9_/-]+/")) {
+            throw new IllegalArgumentException("Invalid checkout host");
+        }
+        return checkoutBaseUrl + URLEncoder.encode(userId, StandardCharsets.UTF_8)
                 .replace("+", "%20");
     }
 
