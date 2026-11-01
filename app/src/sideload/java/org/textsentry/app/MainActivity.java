@@ -3,271 +3,152 @@ package org.textsentry.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.text.InputType;
-import android.view.Gravity;
-import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayList;
-
-/** Intentionally simple, native BYOK setup and preview UI. */
+/** Simple home/dashboard for the experimental SMS-monitoring flavor. */
 public final class MainActivity extends Activity {
-    private EditText endpoint, model, prompt, key, sample, cannedReply;
-    private Switch monitor, autoSend, systemOne;
-    private TextView result;
     private Settings settings;
     private KeyVault vault;
 
-    @Override public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
         settings = new Settings(this);
         vault = new KeyVault(this);
-        if ("play".equals(BuildConfig.FLAVOR)) {
-            PlayUi.show(this, settings, vault);
-            return;
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        showHome();
+    }
+
+    private void showHome() {
+        LinearLayout root = UiKit.screen(this, "Less noise. More signal.", false);
+        LinearLayout status = UiKit.card(this, root, 0xFFE4F3D8);
+        UiKit.heading(this, status, "Your inbox, in your hands");
+        UiKit.description(this, status, "TypeSafe AI · Jev latest");
+        UiKit.chip(this, status, vault.hasKey() ? "● API key ready" : "○ Setup needed");
+        String state = !settings.monitoring() ? "Monitoring paused"
+                : settings.autoSend() ? "Automatic replies enabled" : "Preview mode active";
+        TextView headline = UiKit.text(this, state, 22, UiKit.INK, true);
+        headline.setPadding(0, UiKit.dp(this, 22), 0, 0);
+        status.addView(headline);
+        UiKit.description(this, status, settings.autoSend()
+                ? "Eligible messages may receive STOP automatically. Carrier rates may apply."
+                : "With preview mode, suggestions are logged without sending a message.");
+        if (!settings.monitoring()) {
+            UiKit.button(this, status, "Start preview monitoring", true, this::startPreview);
+        } else {
+            UiKit.button(this, status, "Pause monitoring", true, () -> {
+                settings.pause();
+                showHome();
+            });
+            if (!settings.autoSend()) {
+                UiKit.button(this, status, "Enable auto-replies", false, this::confirmAutoSend);
+            } else {
+                UiKit.button(this, status, "Return to preview only", false, () -> {
+                    settings.setAutomation(true, false);
+                    showHome();
+                });
+            }
         }
 
-        ScrollView scroll = new ScrollView(this);
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        int pad = dp(20);
-        root.setPadding(pad, pad, pad, pad);
-        scroll.addView(root);
-        setContentView(scroll);
+        LinearLayout rule = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, rule, "Your rules");
+        UiKit.description(this, rule, settings.prompt());
+        UiKit.chip(this, rule, "Approval threshold  " + settings.confidence() + "%");
+        UiKit.button(this, rule, "Open settings  →", false, () ->
+                startActivity(new Intent(this, SettingsActivity.class)));
 
-        TextView title = new TextView(this);
-        title.setText("TextSentry");
-        title.setTextSize(30);
-        title.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.addView(title);
-        addLabel(root, "Your messages. Your rules. AI-powered replies.");
-        addLabel(root, "Messages are sent to your configured AI provider only when monitoring is enabled. Auto-send is disabled by default.");
-
-        systemOne = new Switch(this);
-        systemOne.setText("Use TypeSafe System One (Jev) classification");
-        systemOne.setChecked(settings.systemOne());
-        root.addView(systemOne);
-        addLabel(root, "System One decides whether to reply; your fixed response is never model-generated. Requires a TypeSafe BYOK key.");
-        endpoint = field(root, "HTTPS chat completions endpoint (chat provider only)", settings.endpoint(), false, false);
-        endpoint.setEnabled(!systemOne.isChecked());
-        model = field(root, "Model identifier (jev-latest for System One)", settings.model(), false, false);
-        key = field(root, "API key (leave empty to keep saved key)", "", false, true);
-        if (vault.hasKey()) key.setHint("API key already saved securely");
-        prompt = field(root, "Rules / instructions", settings.prompt(), true, false);
-        cannedReply = field(root, "Fixed response for System One", settings.cannedReply(), false, false);
-        cannedReply.setEnabled(systemOne.isChecked());
-        systemOne.setOnCheckedChangeListener((button, selected) -> {
-            endpoint.setEnabled(!selected);
-            cannedReply.setEnabled(selected);
-            if (selected && Settings.DEFAULT_MODEL.equals(model.getText().toString())) {
-                model.setText("jev-latest");
-            } else if (!selected && "jev-latest".equals(model.getText().toString())) {
-                model.setText(Settings.DEFAULT_MODEL);
-            }
-        });
-
-        monitor = new Switch(this);
-        monitor.setText("Monitor incoming SMS");
-        monitor.setChecked(settings.monitoring());
-        root.addView(monitor);
-        autoSend = new Switch(this);
-        autoSend.setText("Automatically send AI-approved replies (opt-in)");
-        autoSend.setChecked(settings.autoSend());
-        root.addView(autoSend);
-        autoSend.setOnCheckedChangeListener((view, enabled) -> {
-            if (enabled && !settings.autoSend()) {
-                new AlertDialog.Builder(this)
-                        .setTitle("Enable automatic SMS replies?")
-                        .setMessage("TextSentry will send real SMS to eligible senders without asking you again. Carrier charges may apply. An AI can make mistakes. Keep preview mode on until you trust your rules.")
-                        .setPositiveButton("Enable auto-send", (dialog, which) -> {})
-                        .setNegativeButton("Stay in preview", (dialog, which) -> autoSend.setChecked(false))
-                        .show();
-            }
-        });
-        addLabel(root, "Preview mode: with Auto-send off, incoming messages are evaluated, but no reply is transmitted.");
-
-        Button save = button(root, "Save settings & request permissions");
-        save.setOnClickListener(v -> save());
-
-        Button privacy = button(root, "Privacy & data controls");
-        privacy.setOnClickListener(v -> showPrivacy());
-
-        Button pause = button(root, "PAUSE all SMS monitoring now");
-        pause.setOnClickListener(v -> {
-            settings.pause();
-            monitor.setChecked(false);
-            autoSend.setChecked(false);
-            toast("Monitoring stopped; queued messages invalidated");
-        });
-
-        sample = field(root, "Try a sample SMS (never sends a real SMS)",
+        LinearLayout preview = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, preview, "Test a message");
+        UiKit.description(this, preview, "Try a sample safely. Testing never sends a real SMS.");
+        EditText sample = UiKit.input(this, preview, "Message text",
                 "Sale today! Reply STOP to unsubscribe.", true, false);
-        result = new TextView(this);
-        result.setText("Use Test decision to preview the response.");
-        result.setPadding(0, dp(10), 0, dp(10));
-        Button test = button(root, "Test decision (preview only)");
-        test.setOnClickListener(v -> testDecision());
-        root.addView(result);
-        addLabel(root, "Recent local decisions (no message bodies stored):");
-        TextView log = new TextView(this);
-        log.setText(settings.history());
-        root.addView(log);
-        Button reload = button(root, "Refresh recent decisions");
-        reload.setOnClickListener(v -> log.setText(settings.history()));
+        TextView result = UiKit.description(this, preview, "No test run yet.");
+        UiKit.button(this, preview, "Analyze sample", true, () -> {
+            String content = sample.getText().toString();
+            if (!MessagePolicy.eligible("+15555550123", content)) {
+                result.setText("Blocked by local safety rules.");
+                return;
+            }
+            if (!vault.hasKey()) {
+                result.setText("Add your TypeSafe API key in Settings first.");
+                return;
+            }
+            final String ruleText = settings.prompt();
+            final int threshold = settings.confidence();
+            result.setText("Evaluating · this test will not send an SMS…");
+            new Thread(() -> {
+                String answer;
+                try {
+                    AiDecision decision = new SystemOneClient().decide(
+                            vault.read(), SystemOneClient.MODEL, ruleText,
+                            content, "STOP", threshold / 100.0);
+                    answer = decision.shouldReply ? "Suggested reply: STOP" : "No reply suggested.";
+                } catch (Exception ex) {
+                    answer = "Unable to evaluate. Check your API key or connection.";
+                }
+                String text = answer;
+                runOnUiThread(() -> result.setText(text));
+            }).start();
+        });
+
+        LinearLayout recent = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, recent, "Recent decisions");
+        UiKit.description(this, recent, settings.history());
+        UiKit.button(this, recent, "Refresh activity", false, this::showHome);
+        UiKit.description(this, recent, "Local decisions only. Clear history in Settings.");
     }
 
-    private void showPrivacy() {
-        new AlertDialog.Builder(this)
-                .setTitle("Your SMS and AI provider")
-                .setMessage("When monitoring is enabled, TextSentry can send the content and sender of eligible incoming SMS to the AI provider configured by you, over HTTPS. The provider processes this data under its own privacy policy. TextSentry does not operate a backend. Android WorkManager temporarily queues SMS content on-device. Local decision history, settings and encrypted keys remain on your phone. Auto-send sends real carrier SMS only after separate opt-in. You may pause monitoring or delete local data at any time.")
-                .setPositiveButton("Privacy policy", (dialog, which) -> {
-                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/mbush91/text-sentry/blob/main/PRIVACY.md")));
-                })
-                .setNeutralButton("Delete all local TextSentry data", (dialog, which) ->
-                        confirmErase())
-                .setNegativeButton("Close", null).show();
-    }
-
-    private void confirmErase() {
-        new AlertDialog.Builder(this)
-                .setTitle("Delete local app data?")
-                .setMessage("This stops automation and deletes locally stored API credentials, configuration, recent decisions and deduplication history. This cannot delete data previously sent to your chosen AI provider.")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    DataControl.deleteLocalData(this);
-                    recreate();
-                })
-                .setNegativeButton("Cancel", null).show();
-    }
-
-    private void save() {
-        String url = endpoint.getText().toString().trim();
-        String modelName = model.getText().toString().trim();
-        String rules = prompt.getText().toString().trim();
-        if ((!systemOne.isChecked() && !MessagePolicy.validEndpoint(url))
-                || modelName.isEmpty() || rules.isEmpty()
-                || (systemOne.isChecked() && !SystemOneClient.validReply(cannedReply.getText().toString()))) {
-            toast("Valid provider settings, rules and a safe fixed reply are required");
+    private void startPreview() {
+        if (!vault.hasKey()) {
+            Toast.makeText(this, "Add a TypeSafe key in Settings first", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(this, SettingsActivity.class));
             return;
         }
-        try {
-            String updatedKey = key.getText().toString().trim();
-            boolean providerChanged = settings.systemOne() != systemOne.isChecked()
-                    || (!systemOne.isChecked() && !settings.endpoint().equals(url));
-            if (providerChanged) vault.clear();
-            if (!updatedKey.isEmpty()) vault.save(updatedKey);
-            if (monitor.isChecked() && !vault.hasKey()) {
-                toast("Provider changed or API key missing: monitoring remains off");
-                monitor.setChecked(false);
-                autoSend.setChecked(false);
-            }
-            settings.save(url, modelName, rules, monitor.isChecked(),
-                    monitor.isChecked() && autoSend.isChecked(), systemOne.isChecked(),
-                    cannedReply.getText().toString());
-            key.setText("");
-            if (vault.hasKey()) key.setHint("API key already saved securely");
-            toast("Saved locally");
-            ArrayList<String> missing = new ArrayList<>();
-            if (monitor.isChecked() && checkSelfPermission(Manifest.permission.RECEIVE_SMS)
-                    != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.RECEIVE_SMS);
-            if (monitor.isChecked() && autoSend.isChecked()
-                    && checkSelfPermission(Manifest.permission.SEND_SMS)
-                    != PackageManager.PERMISSION_GRANTED) missing.add(Manifest.permission.SEND_SMS);
-            if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), 1);
-        } catch (Exception ignored) {
-            toast("Could not encrypt API key. Monitoring not enabled.");
-            monitor.setChecked(false);
-            settings.save(url, modelName, rules, false, false, systemOne.isChecked(),
-                    cannedReply.getText().toString());
+        if (checkSelfPermission(Manifest.permission.RECEIVE_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{ Manifest.permission.RECEIVE_SMS }, 100);
+            return;
         }
+        settings.setAutomation(true, false);
+        showHome();
+    }
+
+    private void confirmAutoSend() {
+        new AlertDialog.Builder(this)
+                .setTitle("Enable automatic replies?")
+                .setMessage("TextSentry may send STOP to eligible SMS senders when Jev's approval probability meets your threshold. A wrong decision may confirm your number is active; carrier charges may apply. You can pause at any time.")
+                .setPositiveButton("Enable", (dialog, which) -> {
+                    if (checkSelfPermission(Manifest.permission.SEND_SMS)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{ Manifest.permission.SEND_SMS }, 101);
+                    } else {
+                        settings.setAutomation(true, true);
+                        showHome();
+                    }
+                })
+                .setNegativeButton("Not now", null).show();
     }
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                                                        int[] grantResults) {
+                                                      int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode != 1) return;
-        boolean receive = checkSelfPermission(Manifest.permission.RECEIVE_SMS)
-                == PackageManager.PERMISSION_GRANTED;
-        boolean send = checkSelfPermission(Manifest.permission.SEND_SMS)
-                == PackageManager.PERMISSION_GRANTED;
-        if (!receive || (settings.autoSend() && !send)) {
-            settings.save(settings.endpoint(), settings.model(), settings.prompt(), false, false);
-            monitor.setChecked(false);
-            autoSend.setChecked(false);
-            toast("SMS permission denied; monitoring disabled");
+        boolean granted = grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+        if (requestCode == 100 && granted && vault.hasKey()) {
+            settings.setAutomation(true, false);
+        } else if (requestCode == 101 && granted && settings.monitoring()) {
+            settings.setAutomation(true, true);
+        } else {
+            Toast.makeText(this, "Permission not granted. No change made.", Toast.LENGTH_LONG).show();
         }
+        showHome();
     }
-
-    private void testDecision() {
-        String rule = prompt.getText().toString().trim();
-        String input = sample.getText().toString();
-        String url = endpoint.getText().toString().trim();
-        String name = model.getText().toString().trim();
-        // Snapshot UI state on the main thread before the background request.
-        boolean useSystemOne = systemOne.isChecked();
-        String configuredReply = cannedReply.getText().toString();
-        String suppliedKey = key.getText().toString().trim();
-        if (!MessagePolicy.eligible("+15555550123", input)
-                || (!useSystemOne && !MessagePolicy.validEndpoint(url))) {
-            result.setText("Preview blocked by local safety rules or invalid endpoint.");
-            return;
-        }
-        result.setText("Evaluating preview; no SMS will be sent.");
-        new Thread(() -> {
-            String text;
-            try {
-                String secret = suppliedKey.isEmpty() ? vault.read() : suppliedKey;
-                AiDecision decision = useSystemOne
-                        ? new SystemOneClient().decide(secret, name, rule, input,
-                                configuredReply)
-                        : new DecisionClient().decide(
-                                url, name, secret, rule, "+15555550123", input);
-                text = decision.shouldReply ? "Preview reply: " + decision.reply : "Preview: no reply";
-            } catch (Exception ignored) {
-                text = "Preview failed. Check provider URL, key and model.";
-            }
-            String show = text;
-            runOnUiThread(() -> result.setText(show));
-        }).start();
-    }
-
-    private EditText field(LinearLayout root, String label, String value, boolean multi, boolean secret) {
-        addLabel(root, label);
-        EditText edit = new EditText(this);
-        edit.setSingleLine(!multi);
-        if (multi) { edit.setMinLines(3); edit.setGravity(Gravity.TOP); }
-        if (secret) edit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        edit.setText(value);
-        root.addView(edit, new LinearLayout.LayoutParams(-1, -2));
-        return edit;
-    }
-
-    private void addLabel(LinearLayout root, String message) {
-        TextView text = new TextView(this);
-        text.setText(message);
-        text.setTextSize(15);
-        text.setPadding(0, dp(14), 0, dp(4));
-        root.addView(text);
-    }
-
-    private Button button(LinearLayout root, String name) {
-        Button button = new Button(this);
-        button.setText(name);
-        root.addView(button);
-        return button;
-    }
-
-    private int dp(int amount) {
-        return (int) (amount * getResources().getDisplayMetrics().density);
-    }
-
-    private void toast(String message) { Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
 }
