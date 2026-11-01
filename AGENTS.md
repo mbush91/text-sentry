@@ -16,7 +16,7 @@ Native Android SMS triage and AI-reply automation. User-configured HTTPS OpenAI-
 
 ## Security & behavior
 - NEVER commit API keys, keystores or personally identifiable SMS data; no secrets or raw SMS in logs.
-- The existing BYOK TypeSafe key remains supported and on-device in Android Keystore. Google-only Cognito sign-in is now optional; the Cognito control plane stores account identity and future subscriber keys but never SMS. Managed OpenRouter-key retrieval is **not yet integrated** into Android; those keys must remain RAM-only when added, never saved to the OAuth token vault.
+- The existing BYOK TypeSafe key remains supported and on-device in Android Keystore. Google-only Cognito sign-in is now optional; the Cognito control plane stores account identity and future subscriber keys but never SMS. Managed OpenRouter-key retrieval is integrated with the Account screen. Those keys MUST remain RAM-only, never saved in the OAuth token vault, SharedPreferences, Room, logs, WorkManager, backups or saved instance state. Clearing account sessions or all local app data also clears the in-memory managed key. Managed keys are not used for TypeSafe Jev classification.
 - Jev/System One is a typed classifier, not a chat-completions API. Its model decision only authorizes a fixed user-defined reply; malformed or uncertain responses must fail closed.
 - Keep `TYPESAFE_AI_API_KEY` confined to the trusted live CI job on main or a deliberate workflow_dispatch, NEVER in ordinary pull_request jobs, Gradle source, or APKs.
 - No telemetry. Never send SMS content to the TextSentry AWS backend; only submit message text to the fixed TypeSafe model after the existing explicit user opt-in. Cognito authentication is separate from SMS analysis.
