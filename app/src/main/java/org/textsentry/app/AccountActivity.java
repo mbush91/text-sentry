@@ -31,12 +31,14 @@ public final class AccountActivity extends Activity {
     private AuthorizationService service;
     private AuthSessionStore sessions;
     private TextView status;
+    private int authGeneration;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         service = new AuthorizationService(this);
         sessions = new AuthSessionStore(this);
         render();
+        if (sessions.hasSession()) fetchManagedKey();
     }
 
     private void render() {
@@ -57,6 +59,8 @@ public final class AccountActivity extends Activity {
                                     "Your local message history and BYOK settings are unchanged.")
                             .setPositiveButton("Sign out", (dialog, which) -> {
                                 try {
+                                    authGeneration++;
+                                    ManagedKeyMemory.clear();
                                     sessions.clear();
                                     render();
                                 } catch (Exception e) {
@@ -70,11 +74,13 @@ public final class AccountActivity extends Activity {
         UiKit.heading(this, info, "Private by design");
         UiKit.description(this, info,
                 "Google sign-in creates your TextSentry account. No SMS content is sent to " +
-                "TextSentry's AWS service. Message analysis still uses your current TypeSafe " +
-                "key until managed subscriptions and key retrieval are available.");
+                "TextSentry's AWS service. Current SMS classification still uses your " +
+                "TypeSafe BYOK key; managed OpenRouter access is currently separate.");
         UiKit.description(this, info,
                 "Account tokens are encrypted using Android Keystore and cleared on sign-out " +
-                "or Delete all app data. Managed OpenRouter keys will be memory-only.");
+                "or Delete all app data. Your managed OpenRouter key is fetched only into " +
+                "RAM and disappears on process restart or sign-out.");
+        UiKit.button(this, info, "Refresh managed key", false, this::fetchManagedKey);
     }
 
     private void refreshStatus() {
@@ -93,6 +99,8 @@ public final class AccountActivity extends Activity {
     }
 
     private void startLogin() {
+        authGeneration++;
+        ManagedKeyMemory.clear();
         status.setText("Connecting securely to TextSentry…");
         new Thread(() -> {
             try {
@@ -172,12 +180,82 @@ public final class AccountActivity extends Activity {
                     state.update(tokens, null);
                     try {
                         sessions.save(state);
-                        runOnUiThread(() -> { if (!isFinishing()) render(); });
+                        runOnUiThread(() -> {
+                            if (!isFinishing() && !isDestroyed()) {
+                                authGeneration++;
+                                ManagedKeyMemory.clear();
+                                render();
+                                fetchManagedKey();
+                            }
+                        });
                     } catch (Exception e) {
                         runOnUiThread(() -> status.setText(
                                 "The account could not be saved securely. Sign-in was not completed."));
                     }
                 });
+    }
+
+    /** Refresh Cognito access tokens when necessary, then fetch into RAM only. */
+    private void fetchManagedKey() {
+        if (!sessions.hasSession()) {
+            ManagedKeyMemory.clear();
+            status.setText("Sign in with Google to get your managed key.");
+            return;
+        }
+        final int generation = authGeneration;
+        status.setText("Checking your managed key…");
+        try {
+            AuthState state = sessions.load();
+            if (state == null || !state.isAuthorized()) {
+                ManagedKeyMemory.clear();
+                status.setText("Sign in again to refresh your account.");
+                return;
+            }
+            state.performActionWithFreshTokens(service, (accessToken, idToken, failure) -> {
+                if (generation != authGeneration || isFinishing() || isDestroyed()) return;
+                if (failure != null || accessToken == null) {
+                    ManagedKeyMemory.clear();
+                    status.setText("Account session expired. Sign in again.");
+                    return;
+                }
+                try {
+                    // Persist only OAuth session tokens, never the OpenRouter key.
+                    sessions.save(state);
+                } catch (Exception e) {
+                    ManagedKeyMemory.clear();
+                    status.setText("Unable to secure refreshed account tokens.");
+                    return;
+                }
+                new Thread(() -> {
+                    ManagedKeyClient.KeyResponse key = null;
+                    String error = null;
+                    try {
+                        key = ManagedKeyClient.fetch(accessToken);
+                    } catch (Exception e) {
+                        // ManagedKeyClient exceptions do not contain credentials.
+                        error = e.getMessage();
+                    }
+                    final ManagedKeyClient.KeyResponse fetched = key;
+                    final String problem = error;
+                    runOnUiThread(() -> {
+                        if (generation != authGeneration || isFinishing() || isDestroyed()
+                                || !sessions.hasSession()) return;
+                        if (fetched == null) {
+                            ManagedKeyMemory.clear();
+                            status.setText(problem == null
+                                    ? "Could not retrieve managed key."
+                                    : problem);
+                        } else {
+                            ManagedKeyMemory.install(fetched.key, fetched.expiresAtMillis);
+                            status.setText(fetched.status());
+                        }
+                    });
+                }, "textsentry-managed-key").start();
+            });
+        } catch (Exception e) {
+            ManagedKeyMemory.clear();
+            status.setText("Unable to read account session. Sign in again.");
+        }
     }
 
     @Override protected void onDestroy() {

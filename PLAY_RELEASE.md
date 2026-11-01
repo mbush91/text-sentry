@@ -9,7 +9,7 @@
 
 Google Play's SMS policy requires active default SMS handler status or an individually approved exception for the restricted permissions. A hypothetical exception for *device automation* requires automation across multiple areas of Android; this app currently automates SMS only and should not claim it qualifies. A spam-blocking exception is also subject to Google review, not guaranteed. Do not change the manifest to mimic default-handler eligibility without implementing and testing a complete usable SMS/MMS client.
 
-Google-only Cognito sign-in is offered in both editions through a browser redirect with PKCE. It adds no SMS or Call Log permissions. Cognito stores account identity (including email) separately from locally encrypted account tokens; Google and AWS process sign-in information, and no SMS message is sent to the account API. The Play Data Safety disclosure and public privacy policy must include this processing before any release.
+Google-only Cognito sign-in is offered in both editions through a browser redirect with PKCE. It adds no SMS or Call Log permissions. Cognito stores account identity (including email) separately from locally encrypted account tokens; Google and AWS process sign-in information, and no SMS message is sent to the account API. The Play Data Safety disclosure and public privacy policy must include this processing and the additional retrieval of OpenRouter keys into volatile RAM (no key storage) before any release.
 
 ## Build and verify
 
