@@ -14,10 +14,12 @@ public final class HistoryActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (!SetupGate.enforce(this)) return;
         render();
     }
     @Override protected void onResume() {
         super.onResume();
+        if (!SetupGate.enforce(this)) return;
         render();
     }
 
