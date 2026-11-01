@@ -35,7 +35,13 @@ public final class SetupActivity extends Activity {
 
     private void display() {
         if (isFinishing() || openingHome) return;
-        if (SetupGate.canEnterApp(this)) {
+        // Existing, already configured Google users also need the one-time
+        // subscription prompt when upgrading to a checkout-enabled sideload APK.
+        // No permissions are reset and no local history is deleted.
+        boolean complete = SetupGate.canEnterApp(this);
+        boolean needsBilling = SetupFlow.needsSubscriptionPrompt(this);
+        if (SetupFlow.shouldReturnHome(complete, BuildConfig.WEB_CHECKOUT_ENABLED,
+                needsBilling)) {
             goHome();
             return;
         }
@@ -175,7 +181,8 @@ public final class SetupActivity extends Activity {
             UiKit.button(this, card, "View account", false,
                     () -> startActivity(new Intent(this, AccountActivity.class)));
         }
-        UiKit.button(this, root, "Continue to SMS permissions", false, () -> {
+        UiKit.button(this, root, SetupFlow.isComplete(this)
+                ? "Continue to TextSentry" : "Continue to SMS permissions", false, () -> {
             SetupFlow.completeSubscriptionPrompt(this);
             display();
         });
