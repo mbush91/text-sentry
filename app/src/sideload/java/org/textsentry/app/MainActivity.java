@@ -30,145 +30,101 @@ public final class MainActivity extends Activity {
     }
 
     private void showHome() {
-        LinearLayout root = UiKit.screen(this, "Less noise. More signal.", false);
-        LinearLayout status = UiKit.card(this, root, UiKit.HIGHLIGHT);
-        UiKit.heading(this, status, "Your inbox, in your hands");
-        UiKit.description(this, status, "Jev AI · your rules, your inbox");
-        UiKit.chip(this, status, AnalysisAccess.status(this));
+        LinearLayout root = UiKit.screen(this, "Block the noise.", false);
+
+        LinearLayout overview = UiKit.card(this, root, UiKit.HIGHLIGHT);
+        UiKit.heading(this, overview, "Inbox protection");
         String state = settings.monitoring() && !hasReceivePermission()
-                ? "Monitoring blocked: SMS permission missing"
-                : !settings.monitoring() ? "Monitoring paused"
-                : settings.autoSend() ? "Automatic replies enabled" : "Preview mode active";
-        TextView headline = UiKit.text(this, state, 22, UiKit.INK, true);
-        headline.setPadding(0, UiKit.dp(this, 22), 0, 0);
-        status.addView(headline);
-        UiKit.description(this, status, settings.autoSend()
-                ? "Eligible messages may receive STOP automatically. Carrier rates may apply."
-                : "With preview mode, suggestions are logged without sending a message.");
+                ? "SMS permission needed"
+                : !settings.monitoring() ? "Paused"
+                : settings.autoSend() ? "Auto-replies on" : "Previewing";
+        UiKit.chip(this, overview, state + " · " + settings.confidence() + "% match");
+        UiKit.description(this, overview, AnalysisAccess.status(this));
         if (!settings.monitoring()) {
-            UiKit.button(this, status, "Start preview monitoring", true, this::startPreview);
+            UiKit.button(this, overview, "Start preview", true, this::startPreview);
         } else {
-            UiKit.button(this, status, "Pause monitoring", true, () -> {
+            UiKit.button(this, overview, "Pause", true, () -> {
                 settings.pause();
                 showHome();
             });
-            if (!settings.autoSend()) {
-                UiKit.button(this, status, "Enable auto-replies", false, this::confirmAutoSend);
-            } else {
-                UiKit.button(this, status, "Return to preview only", false, () -> {
+            UiKit.button(this, overview, settings.autoSend()
+                    ? "Turn off auto-replies" : "Enable auto-replies", false, () -> {
+                if (settings.autoSend()) {
                     settings.setAutomation(true, false);
                     showHome();
-                });
-            }
+                } else confirmAutoSend();
+            });
         }
 
-        LinearLayout account = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, account, "Your TextSentry account");
-        UiKit.description(this, account,
-                new AuthSessionStore(this).hasSession()
-                        ? "Google sign-in connected on this device."
-                        : "Sign up or sign in with Google through Cognito.");
-        UiKit.button(this, account, "Manage account  →", false, () ->
-                startActivity(new Intent(this, AccountActivity.class)));
-
-        LinearLayout rule = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, rule, "Your rules");
-        UiKit.description(this, rule, "Selected: " +
-                MessageCategories.summary(settings.categoryMask()));
-        UiKit.description(this, rule, "Additional restrictions: " +
-                (settings.prompt().isEmpty() ? "None" : settings.prompt()));
-        UiKit.chip(this, rule, "Approval threshold  " + settings.confidence() + "%");
-        UiKit.button(this, rule, "Open settings  →", false, () ->
-                startActivity(new Intent(this, SettingsActivity.class)));
-
-        LinearLayout permissions = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, permissions, "Setup & Android permissions");
-        boolean canReceive = hasReceivePermission();
-        boolean canSend = hasSendPermission();
-        UiKit.description(this, permissions,
-                "Incoming SMS monitoring: " + (canReceive ? "✓ Allowed" : "○ Permission missing"));
-        if (!canReceive) UiKit.button(this, permissions, "Request incoming SMS access", false,
-                () -> requestPermissions(new String[]{Manifest.permission.RECEIVE_SMS}, 102));
-        UiKit.description(this, permissions,
-                "Optional SMS replies: " + (canSend ? "✓ Allowed" : "○ Permission missing"));
-        if (!canSend) UiKit.button(this, permissions, "Request outgoing SMS access", false,
-                () -> requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 103));
-        UiKit.description(this, permissions,
-                "Android may block SMS permission prompts because these are restricted " +
-                "permissions. A missing permission means monitoring or sending cannot work.");
-        UiKit.button(this, permissions, "Open TextSentry app permissions", false,
-                () -> PermissionSetup.openAppDetails(this));
-        UiKit.button(this, permissions, "SMS permission troubleshooting", false,
-                this::showPermissionHelp);
-
-        boolean batteryExempt = PermissionSetup.batteryOptimizationsExempt(this);
-        UiKit.description(this, permissions, "Background battery optimization: " +
-                (batteryExempt ? "Exempt (Android)" : "Not exempt (Android)"));
-        UiKit.description(this, permissions,
-                "Optional: If background analysis is delayed, go to Android app info > " +
-                "Battery / App battery usage > Unrestricted, where available. " +
-                "Battery access cannot grant SMS permissions.");
-        UiKit.button(this, permissions, "Open battery optimization settings", false,
-                () -> PermissionSetup.openBatterySettings(this));
-        UiKit.description(this, permissions,
-                "Permission grants do not enable automatic replies. Auto-replies require " +
-                "separate consent, and TextSentry never deletes original inbox messages.");
-
         LinearLayout preview = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, preview, "Test a message");
-        UiKit.description(this, preview, "Try a sample safely. Testing never sends a real SMS.");
-        EditText sample = UiKit.input(this, preview, "Message text",
+        UiKit.heading(this, preview, "Try it");
+        EditText sample = UiKit.input(this, preview, "Sample message",
                 "Sale today! Reply STOP to unsubscribe.", true, false);
-        TextView result = UiKit.description(this, preview, "No test run yet.");
+        sample.setMinLines(2);
+        TextView result = UiKit.description(this, preview, "");
         UiKit.button(this, preview, "Analyze sample", true, () -> {
             String content = sample.getText().toString();
             if (!MessagePolicy.eligible("+15555550123", content)) {
-                result.setText("Blocked by local safety rules.");
+                result.setText("Blocked by safety rules.");
                 return;
             }
-            if (!AnalysisAccess.hasProvider(this)) {
-                result.setText("Sign in with Google or bring your own key to analyze.");
-                return;
-            }
-            final String ruleText;
+            final String instructions;
             try {
-                ruleText = settings.effectivePrompt();
-            } catch (IllegalArgumentException invalid) {
-                result.setText("Settings rules are too long.");
+                instructions = settings.effectivePrompt();
+            } catch (IllegalArgumentException e) {
+                result.setText("Check your rules in Settings.");
                 return;
             }
-            if (ruleText.isEmpty()) {
-                result.setText("Select at least one category in Settings.");
+            if (instructions.isEmpty()) {
+                result.setText("Choose a category in Settings.");
                 return;
             }
-            final int threshold = settings.confidence();
-            result.setText("Evaluating · this test will not send an SMS…");
+            final double threshold = settings.confidence() / 100.0;
+            result.setText("Analyzing…");
             new Thread(() -> {
                 String answer;
                 try {
                     SystemOneClient.Evaluation evaluation = AnalysisAccess.evaluate(this,
-                            ruleText, content, threshold / 100.0,
+                            instructions, content, threshold,
                             DeveloperMode.traceSink(this, "sample"));
-                    answer = (evaluation.decision.shouldReply ? "Suggested reply: STOP" :
-                            "No reply suggested.") + " Jev match: " +
-                            Math.round(evaluation.confidence * 100) + "%.";
-                } catch (Exception ex) {
-                    answer = "Unable to analyze. Check your account/key or connection.";
+                    answer = (evaluation.decision.shouldReply ? "Suggest STOP" : "No reply")
+                            + " · " + Math.round(evaluation.confidence * 100) + "% match";
+                } catch (Exception e) {
+                    answer = "Analysis unavailable. Check your connection.";
                 }
-                String text = answer;
-                runOnUiThread(() -> result.setText(text));
-            }).start();
+                String finalAnswer = answer;
+                runOnUiThread(() -> result.setText(finalAnswer));
+            }, "textsentry-sample").start();
         });
 
-        LinearLayout recent = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, recent, "Message history");
-        UiKit.description(this, recent,
-                "Read the original messages TextSentry evaluated, the model match probability, " +
-                "whether STOP was actually sent, and whether TextSentry deleted the SMS.");
-        UiKit.button(this, recent, "View message history  →", true, () ->
+        if (!hasReceivePermission() || (settings.autoSend() && !hasSendPermission())) {
+            LinearLayout permissions = UiKit.card(this, root, 0xFFFFFFFF);
+            UiKit.heading(this, permissions, "Permissions");
+            if (!hasReceivePermission()) {
+                UiKit.button(this, permissions, "Allow incoming SMS", false,
+                        () -> requestPermissions(new String[]{Manifest.permission.RECEIVE_SMS}, 102));
+            }
+            if (!hasSendPermission()) {
+                UiKit.button(this, permissions, "Allow SMS replies", false,
+                        () -> requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 103));
+            }
+            UiKit.button(this, permissions, "Permission help", false,
+                    this::showPermissionHelp);
+            UiKit.button(this, permissions, "Android app settings", false,
+                    () -> PermissionSetup.openAppDetails(this));
+        }
+
+        LinearLayout navigate = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.button(this, navigate, "History", false, () ->
                 startActivity(new Intent(this, HistoryActivity.class)));
-        UiKit.description(this, recent,
-                "Sensitive history stays encrypted on this device; no inbox deletion is performed.");
+        UiKit.button(this, navigate, "Settings", false, () ->
+                startActivity(new Intent(this, SettingsActivity.class)));
+        UiKit.button(this, navigate, "Account", false, () ->
+                startActivity(new Intent(this, AccountActivity.class)));
+        if (!PermissionSetup.batteryOptimizationsExempt(this)) {
+            UiKit.button(this, navigate, "Background battery settings", false,
+                    () -> PermissionSetup.openBatterySettings(this));
+        }
     }
 
     private boolean hasReceivePermission() {
