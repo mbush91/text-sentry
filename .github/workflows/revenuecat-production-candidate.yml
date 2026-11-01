@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/revenuecat-production-candidate.yml'
+      - 'app/src/main/java/org/textsentry/app/SmsPermissionRequestGuard.java'
 
 permissions:
   contents: read
