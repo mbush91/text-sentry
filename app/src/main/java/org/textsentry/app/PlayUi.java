@@ -15,7 +15,7 @@ public final class PlayUi {
     public static void show(Activity activity, Settings settings, KeyVault vault) {
         LinearLayout root = UiKit.screen(activity, "Less noise. More signal.", false);
 
-        LinearLayout intro = UiKit.card(activity, root, 0xFFE4F3D8);
+        LinearLayout intro = UiKit.card(activity, root, UiKit.HIGHLIGHT);
         UiKit.heading(activity, intro, "A calmer way to message");
         UiKit.description(activity, intro,
                 "Review the texts you choose with TypeSafe AI. Nothing is analyzed until you ask.");

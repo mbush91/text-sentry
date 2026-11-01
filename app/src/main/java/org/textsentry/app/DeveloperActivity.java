@@ -58,7 +58,7 @@ public final class DeveloperActivity extends Activity {
             }
         });
 
-        LinearLayout diagnostic = UiKit.card(this, root, 0xFFE4F3D8);
+        LinearLayout diagnostic = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, diagnostic, "Raw Jev input / output");
         UiKit.description(this, diagnostic,
                 "The five most recent evaluations appear below. Full JSON request bodies " +

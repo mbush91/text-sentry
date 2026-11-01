@@ -29,7 +29,7 @@ public final class MainActivity extends Activity {
 
     private void showHome() {
         LinearLayout root = UiKit.screen(this, "Less noise. More signal.", false);
-        LinearLayout status = UiKit.card(this, root, 0xFFE4F3D8);
+        LinearLayout status = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, status, "Your inbox, in your hands");
         UiKit.description(this, status, "TypeSafe AI · Jev latest");
         UiKit.chip(this, status, vault.hasKey() ? "● API key ready" : "○ Setup needed");
