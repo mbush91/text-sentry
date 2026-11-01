@@ -5,7 +5,9 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Button;
+import android.widget.CheckBox;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -18,6 +20,8 @@ public final class SettingsActivity extends Activity {
     private KeyVault vault;
     private EditText apiKey;
     private EditText prompt;
+    private CheckBox voteCategory, politicalCategory, marketingCategory;
+    private TextView generatedInstructions;
     private TextView confidenceLabel;
     private TextView keyState;
     private int confidence;
@@ -50,10 +54,40 @@ public final class SettingsActivity extends Activity {
                         }).setNegativeButton("Cancel", null).show());
 
         LinearLayout rules = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, rules, "Decision rules");
+        UiKit.heading(this, rules, "Message categories");
         UiKit.description(this, rules,
-                "Tell Jev which messages deserve action. Uncertain messages are ignored.");
-        prompt = UiKit.input(this, rules, "Instructions", settings.prompt(), true, false);
+                "Select which kinds of messages should qualify for a STOP opt-out. " +
+                "A message only needs to match one checked category.");
+        voteCategory = addCategory(rules, "Go vote reminders",
+                "Unsolicited nonpartisan reminders to vote.", MessageCategories.VOTE);
+        politicalCategory = addCategory(rules, "Political campaign messages",
+                "Candidate, party, fundraising or campaign texts.", MessageCategories.POLITICAL);
+        marketingCategory = addCategory(rules, "Marketing ads",
+                "Retail promotions, sales, coupons and advertising.", MessageCategories.MARKETING);
+        UiKit.description(this, rules,
+                "Only messages with an explicit STOP unsubscribe option qualify. " +
+                "Official voting information, security codes and personal texts are excluded.");
+
+        UiKit.heading(this, rules, "Additional instructions");
+        prompt = UiKit.input(this, rules, "Optional extra restrictions",
+                settings.prompt(), true, false);
+        prompt.setHint("e.g., Ignore messages from local charities");
+        UiKit.description(this, rules,
+                "Your selected categories and these extra restrictions are combined " +
+                "into one TypeSafe request per eligible message.");
+        generatedInstructions = UiKit.description(this, rules, "");
+        generatedInstructions.setMaxLines(12);
+        voteCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
+        politicalCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
+        marketingCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
+        prompt.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence t, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence t, int start, int before, int count) {
+                updatePreview();
+            }
+            @Override public void afterTextChanged(Editable e) {}
+        });
+        updatePreview();
         confidenceLabel = UiKit.description(this, rules,
                 "Minimum approval probability: " + confidence + "%");
         SeekBar slider = new SeekBar(this);
@@ -104,6 +138,37 @@ public final class SettingsActivity extends Activity {
         UiKit.button(this, root, "Save settings", true, this::save);
     }
 
+    private CheckBox addCategory(LinearLayout parent, String title, String subtitle, int bit) {
+        CheckBox box = new CheckBox(this);
+        box.setText(title);
+        box.setTextSize(15);
+        box.setTextColor(UiKit.INK);
+        box.setPadding(0, UiKit.dp(this, 10), 0, 0);
+        box.setChecked((settings.categoryMask() & bit) != 0);
+        parent.addView(box);
+        UiKit.description(this, parent, subtitle);
+        return box;
+    }
+
+    private int selectedMask() {
+        int selected = 0;
+        if (voteCategory.isChecked()) selected |= MessageCategories.VOTE;
+        if (politicalCategory.isChecked()) selected |= MessageCategories.POLITICAL;
+        if (marketingCategory.isChecked()) selected |= MessageCategories.MARKETING;
+        return selected;
+    }
+
+    private void updatePreview() {
+        try {
+            String combined = MessageCategories.compose(selectedMask(), prompt.getText().toString());
+            generatedInstructions.setText(combined.isEmpty()
+                    ? "No categories selected — messages will not be evaluated."
+                    : "Combined AI instructions (one request):\n" + combined);
+        } catch (IllegalArgumentException invalid) {
+            generatedInstructions.setText("Rules are too long. Shorten the extra instructions.");
+        }
+    }
+
     private void refreshKey() {
         keyState.setText(vault.hasKey()
                 ? "● API key saved securely. Leave the field empty to keep it."
@@ -116,7 +181,7 @@ public final class SettingsActivity extends Activity {
         try {
             // If saving the key fails, never enable automation or silently lose settings.
             if (!entered.isEmpty()) vault.save(entered);
-            settings.savePolicy(policy, confidence, "STOP");
+            settings.saveCategoryPolicy(policy, confidence, selectedMask());
             apiKey.setText("");
             toast("Settings saved");
             finish();
