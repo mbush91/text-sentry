@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="textsentry_lime">#C8F871</color>
+    <!-- Shared with text-sentry-web/src/assets/site.css :root -->
+    <color name="textsentry_night">#050E20</color>
+    <color name="textsentry_ink">#0B1730</color>
+    <color name="textsentry_muted">#5D6F88</color>
+    <color name="textsentry_cyan">#26D7EE</color>
+    <color name="textsentry_blue">#258CFA</color>
+    <color name="textsentry_purple">#6551F9</color>
+    <color name="textsentry_paper">#F3F7FF</color>
+    <color name="textsentry_line">#DEE7F7</color>
+    <color name="textsentry_highlight">#E7F0FF</color>
 </resources>
