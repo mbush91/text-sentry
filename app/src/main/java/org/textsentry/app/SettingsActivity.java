@@ -222,7 +222,7 @@ public final class SettingsActivity extends Activity {
             return;
         }
         if (developerCard != null) return;
-        developerCard = UiKit.card(this, root, 0xFFE4F3D8);
+        developerCard = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, developerCard, "Developer mode");
         UiKit.description(this, developerCard,
                 "Advanced prompting and encrypted Jev request/response traces.");
