@@ -44,29 +44,16 @@ public final class AccountActivity extends Activity {
     private void render() {
         boolean welcome = getIntent().getBooleanExtra("welcome", false);
         LinearLayout root = UiKit.screen(this,
-                welcome ? "Block the noise. Start with Google." : "Your TextSentry account.", !welcome);
+                welcome ? "Continue with Google" : "Account", !welcome);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, card, welcome ? "Sign in or create an account" : "Google account");
+        UiKit.heading(this, card, welcome ? "Sign in or sign up" : "Google account");
         UiKit.description(this, card,
-                "Create an account or sign in with Google. Authentication uses " +
-                "Cognito's secure browser sign-in; TextSentry never sees your Google password.");
+                welcome ? "One account. Less spam." : "Manage your Google sign-in.");
         status = UiKit.description(this, card, "");
         refreshStatus();
         UiKit.button(this, card, sessions.hasSession() ? "Switch Google account"
                 : "Continue with Google", true, this::startLogin);
-        if (welcome && !sessions.hasSession()) {
-            TextView skip = UiKit.description(this, card,
-                    "Skip sign-up · Bring your own key");
-            skip.setTextSize(12);
-            skip.setPaintFlags(skip.getPaintFlags()
-                    | android.graphics.Paint.UNDERLINE_TEXT_FLAG);
-            skip.setContentDescription("Skip sign-up and bring your own TypeSafe key");
-            skip.setOnClickListener(v -> {
-                Onboarding.complete(this);
-                startActivity(new Intent(this, SettingsActivity.class));
-                finish();
-            });
-        }
+        // BYOK entry lives on the required Setup screen; no settings bypass here.
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Sign out on this device", false, () ->
                     new AlertDialog.Builder(this)
@@ -87,17 +74,10 @@ public final class AccountActivity extends Activity {
                             .setNegativeButton("Cancel", null).show());
         }
 
-        LinearLayout info = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, info, "Private by design");
-        UiKit.description(this, info,
-                "Google sign-in creates your TextSentry account. No SMS content is sent to " +
-                "TextSentry's AWS service. Signed-in accounts use the $1/month " +
-                "OpenRouter key with Jev. Or use your own TypeSafe key without signing up.");
-        UiKit.description(this, info,
-                "Account tokens are encrypted using Android Keystore and cleared on sign-out " +
-                "or Delete all app data. Your managed OpenRouter key is fetched only into " +
-                "RAM and disappears on process restart or sign-out. Signing out pauses monitoring.");
-        UiKit.button(this, info, "Refresh managed key", false, this::fetchManagedKey);
+        if (sessions.hasSession()) {
+            UiKit.button(this, card, "Refresh key", false, this::fetchManagedKey);
+        }
+        UiKit.description(this, root, "Your key stays in memory. No SMS goes to AWS.");
     }
 
     private void refreshStatus() {
