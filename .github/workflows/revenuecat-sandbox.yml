@@ -1,0 +1,78 @@
+name: Private RevenueCat sandbox APK
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: textsentry-billing-sandbox-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sandbox-checkout-apk:
+    name: Signed sideload APK for sandbox checkout only
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.2'
+
+      - name: Require a sandbox URL and production signing material
+        env:
+          SANDBOX_URL: ${{ secrets.TEXTSENTRY_REVENUECAT_SANDBOX_URL }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$SANDBOX_URL" || -z "$KEYSTORE" || -z "$PASSWORD" || -z "$ALIAS" || -z "$KEY_PASSWORD" ]]; then
+            echo "::error::Configure TEXTSENTRY_REVENUECAT_SANDBOX_URL and the four ANDROID_* signing secrets."
+            exit 1
+          fi
+          if [[ ! "$SANDBOX_URL" =~ ^https://pay[.]rev[.]cat/sandbox/[A-Za-z0-9_-]+/?$ ]]; then
+            echo "::error::The checkout URL must be an identified-user RevenueCat sandbox purchase link."
+            exit 1
+          fi
+
+      - name: Prepare signing keystore
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/textsentry-sandbox-signing.jks"
+          chmod 600 "$RUNNER_TEMP/textsentry-sandbox-signing.jks"
+
+      - name: Test, lint and build signed sandbox APK
+        env:
+          TEXTSENTRY_ENABLE_WEB_CHECKOUT: 'true'
+          TEXTSENTRY_WEB_CHECKOUT_URL: ${{ secrets.TEXTSENTRY_REVENUECAT_SANDBOX_URL }}
+          APP_SIGNING_STORE_FILE: ${{ runner.temp }}/textsentry-sandbox-signing.jks
+          APP_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          APP_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          APP_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :app:testSideloadDebugUnitTest :app:lintSideloadDebug :app:assembleSideloadRelease
+          APK=app/build/outputs/apk/sideload/release/app-sideload-release.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose "$APK"
+          cp "$APK" "$RUNNER_TEMP/TextSentry-SANDBOX-checkout.apk"
+
+      - name: Upload short-lived private test artifact (never a GitHub Release)
+        uses: actions/upload-artifact@v7
+        with:
+          name: TextSentry-SANDBOX-checkout-DO-NOT-DISTRIBUTE
+          path: ${{ runner.temp }}/TextSentry-SANDBOX-checkout.apk
+          if-no-files-found: error
+          retention-days: 1
