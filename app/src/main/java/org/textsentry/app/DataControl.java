@@ -12,6 +12,8 @@ public final class DataControl {
         new Settings(context).pause();
         WorkManager.getInstance(context).cancelAllWork();
         new KeyVault(context).clear();
+        // Account refresh/access/ID tokens are stored in a separate Keystore-backed vault.
+        new AuthSessionStore(context).clear();
         // Wipe the encrypted message archive and its Android Keystore key as well.
         try {
             new HistoryStore(context).deleteAll();
@@ -19,7 +21,7 @@ public final class DataControl {
             throw new IllegalStateException("Could not erase encrypted message history", e);
         }
         for (String name : new String[] {"textsentry_settings", "textsentry_reply_ledger",
-                "textsentry_secrets", "textsentry_message_history"}) {
+                "textsentry_secrets", "textsentry_message_history", "textsentry_auth_session"}) {
             context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit();
         }
     }

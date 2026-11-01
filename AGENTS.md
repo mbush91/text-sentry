@@ -16,10 +16,10 @@ Native Android SMS triage and AI-reply automation. User-configured HTTPS OpenAI-
 
 ## Security & behavior
 - NEVER commit API keys, keystores or personally identifiable SMS data; no secrets or raw SMS in logs.
-- BYOK is mandatory, kept on-device with Android Keystore; no managed backend.
+- The existing BYOK TypeSafe key remains supported and on-device in Android Keystore. Google-only Cognito sign-in is now optional; the Cognito control plane stores account identity and future subscriber keys but never SMS. Managed OpenRouter-key retrieval is **not yet integrated** into Android; those keys must remain RAM-only when added, never saved to the OAuth token vault.
 - Jev/System One is a typed classifier, not a chat-completions API. Its model decision only authorizes a fixed user-defined reply; malformed or uncertain responses must fail closed.
 - Keep `TYPESAFE_AI_API_KEY` confined to the trusted live CI job on main or a deliberate workflow_dispatch, NEVER in ordinary pull_request jobs, Gradle source, or APKs.
-- No telemetry. Only send SMS content to the explicitly configured HTTPS model provider after opt-in.
+- No telemetry. Never send SMS content to the TextSentry AWS backend; only submit message text to the fixed TypeSafe model after the existing explicit user opt-in. Cognito authentication is separate from SMS analysis.
 - All inbound messages, model responses, and remote errors are untrusted. Never execute model-provided actions or use model-provided recipients.
 - Fail closed on errors, malformed JSON, missing consent, blocked senders, or invalid phone numbers.
 - Don't reply to OTPs, shortcodes, and emergency messages by default. Don't auto-STOP uncertain scam texts; replying may confirm a number as active.

@@ -23,6 +23,8 @@ public final class PlayUi {
                 : "○ TypeSafe setup needed");
         UiKit.button(activity, intro, "View history  →", false, () ->
                 activity.startActivity(new Intent(activity, HistoryActivity.class)));
+        UiKit.button(activity, intro, "Google account / Sign up  →", false, () ->
+                activity.startActivity(new Intent(activity, AccountActivity.class)));
         UiKit.button(activity, intro, "Settings  →", false, () ->
                 activity.startActivity(new Intent(activity, SettingsActivity.class)));
 
