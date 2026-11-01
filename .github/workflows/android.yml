@@ -155,9 +155,9 @@ jobs:
       - name: Build signed release
         if: steps.signing.outputs.enabled == 'true'
         env:
-          # Off until a real payment and entitlement have been verified.
-          # This never enables hosted web checkout in the Play flavor.
-          TEXTSENTRY_ENABLE_WEB_CHECKOUT: ${{ vars.TEXTSENTRY_PRODUCTION_CHECKOUT_ENABLED == 'true' && 'true' || 'false' }}
+          # Paid access is enforced by AWS; allow sideload users to subscribe.
+          # Play flavor still compiles WEB_CHECKOUT_ENABLED=false with no hosted checkout.
+          TEXTSENTRY_ENABLE_WEB_CHECKOUT: 'true'
           TEXTSENTRY_WEB_CHECKOUT_URL: 'https://pay.rev.cat/mimrlvpobvqnjikw/'
           APP_SIGNING_STORE_FILE: ${{ runner.temp }}/textsentry-release.jks
           APP_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
