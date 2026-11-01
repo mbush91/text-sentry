@@ -1,6 +1,12 @@
 name: Private RevenueCat sandbox APK
 on:
   workflow_dispatch:
+  # Recreate the sandbox APK automatically when this workflow is updated on main.
+  # Do not build on unrelated application pushes or publish test checkout to releases.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/revenuecat-sandbox.yml'
 
 permissions:
   contents: read
@@ -75,4 +81,4 @@ jobs:
           name: TextSentry-SANDBOX-checkout-DO-NOT-DISTRIBUTE
           path: ${{ runner.temp }}/TextSentry-SANDBOX-checkout.apk
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 7
