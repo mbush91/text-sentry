@@ -20,11 +20,12 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         settings = new Settings(this);
         vault = new KeyVault(this);
-        Onboarding.offer(this);
+        SetupGate.enforce(this);
     }
 
     @Override protected void onResume() {
         super.onResume();
+        if (!SetupGate.enforce(this)) return;
         showHome();
     }
 
