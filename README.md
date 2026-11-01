@@ -117,6 +117,14 @@ RevenueCat Billing sandbox monthly subscriptions renew around every **five minut
 
 `subscription_status: unavailable` means verification failed, not an inactive purchase. A separate user-facing status or link alone must never grant access. When diagnosing, avoid a new sandbox purchase until checking the current RevenueCat customer's expiration timestamp and entitlement. The AWS CloudFormation Git-sync deployment must contain the matching diagnostic API changes, and the RevenueCat V1 project secret must be correct. Keep `EnforceSubscriptions: 'false'` while testing.
 
+## Guided sideload setup and restricted permissions
+
+Sideload first-run wizard now follows **Google sign-in → subscription options → SMS permissions → battery access → start monitoring**. The Google account route presents a dedicated subscription step before permissions; the BYOK route skips subscription. The Play-safe manual edition does not show sideload web billing.
+
+On the SMS-permissions screen, **Android permission settings** is the first action. For sideloaded APKs Android may restrict access to sensitive permissions: open **App info → three-dot menu → Allow restricted settings** (when present), return to TextSentry, then explicitly allow incoming SMS and optional replies. The **Open app battery settings** step follows SMS permissions, and guides the user to **Battery → Unrestricted** if supported by the device. Restricting battery optimizations is separate from SMS permissions and remains optional.
+
+Account shows the subscription status and a subscription section before account controls. In a checkout-enabled sandbox or private production-candidate build, **Subscribe to TextSentry** opens the relevant RevenueCat hosted purchase link using the Cognito user ID. In a checkout-disabled public prerelease, Account explicitly says checkout is unavailable in that build rather than hiding the option; installing the signed subscription-enabled sideload candidate preserves the package ID and local history. Browser return alone never marks a purchase paid. Do not enable production billing enforcement until a real payment is independently verified.
+
 ## Production checkout rollout (staged)
 
 The private **production checkout candidate** workflow builds a **signed sideload APK** with `TEXTSENTRY_ENABLE_WEB_CHECKOUT=true` and the provided production Purchase Link `https://pay.rev.cat/mimrlvpobvqnjikw/`. It never publishes a GitHub Release, cannot be triggered on a PR or non-main branch, and uploads a seven-day `TextSentry-PRODUCTION-checkout-CANDIDATE-NOT-PUBLIC` artifact. It is intentionally **real-payment capable**; do not distribute it broadly or complete a real purchase until the live Stripe/RevenueCat configuration and charge are explicitly accepted. The current sandbox workflow remains separate and never creates production purchases.

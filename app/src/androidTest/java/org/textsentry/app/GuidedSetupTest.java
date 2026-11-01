@@ -29,9 +29,36 @@ public class GuidedSetupTest {
 
     @Test public void stepsCannotBeAdvancedWithoutPreviousStage() {
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.LOGIN, false));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.validatedStage(SetupFlow.PERMISSIONS, true));
         assertEquals(SetupFlow.BATTERY, SetupFlow.validatedStage(SetupFlow.BATTERY, true));
+        assertTrue("permissions precede battery", SetupFlow.PERMISSIONS < SetupFlow.BATTERY);
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.PERMISSIONS, false));
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.ACTIVATE, false));
+    }
+
+    @Test public void sideloadGoogleUsersSeeSubscriptionBeforePermissions() {
+        assertTrue(SetupFlow.shouldPromptSubscription(true, false, true, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, false, true, true));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, false, false, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(false, true, true, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, true, true, false));
+    }
+
+    @Test public void oldSetupProgressMigratesWithoutSkippingSmsInstructions() {
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(0));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(1));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.migrateLegacyStage(2));
+        assertEquals(SetupFlow.ACTIVATE, SetupFlow.migrateLegacyStage(3));
+    }
+
+    @Test public void subscriptionPromptIsRecordedIndependentlyOfPermissionSteps() {
+        Context context = app();
+        SetupFlow.reset(context);
+        assertFalse(SetupFlow.subscriptionPromptSeen(context));
+        SetupFlow.completeSubscriptionPrompt(context);
+        assertTrue(SetupFlow.subscriptionPromptSeen(context));
+        assertFalse(SetupFlow.isComplete(context));
+        SetupFlow.reset(context);
     }
 
     @Test public void deletionClearsCompletedSetup() throws Exception {

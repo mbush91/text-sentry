@@ -10,7 +10,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Four short steps: account, battery, SMS permissions, opt-in start. */
+/** Guided setup: sign-in, optional subscription, SMS permissions, battery, start. */
 public final class SetupActivity extends Activity {
     private static final int INCOMING_SMS_REQUEST = 301;
     private static final int OUTGOING_SMS_REQUEST = 302;
@@ -41,6 +41,8 @@ public final class SetupActivity extends Activity {
         }
         if (!SetupGate.hasAccess(this)) {
             renderLogin();
+        } else if (SetupFlow.needsSubscriptionPrompt(this)) {
+            renderSubscription();
         } else if (!SetupPermissions.supportsMonitoring()) {
             renderManualStart();
         } else {
@@ -48,11 +50,11 @@ public final class SetupActivity extends Activity {
                 case SetupFlow.PERMISSIONS:
                     renderPermissions();
                     break;
-                case SetupFlow.ACTIVATE:
-                    renderActivation();
+                case SetupFlow.BATTERY:
+                    renderBattery();
                     break;
                 default:
-                    renderBattery();
+                    renderActivation();
             }
         }
     }
@@ -79,7 +81,11 @@ public final class SetupActivity extends Activity {
 
         LinearLayout segments = new LinearLayout(this);
         segments.setOrientation(LinearLayout.HORIZONTAL);
-        for (int i = 1; i <= (SetupPermissions.supportsMonitoring() ? 4 : 2); i++) {
+        boolean extra = "sideload".equals(BuildConfig.FLAVOR)
+                && new AuthSessionStore(this).hasSession()
+                && !new KeyVault(this).hasKey();
+        int total = SetupPermissions.supportsMonitoring() ? (extra ? 5 : 4) : 2;
+        for (int i = 1; i <= total; i++) {
             android.view.View bar = new android.view.View(this);
             bar.setBackground(UiKit.shape(i <= number ? UiKit.ACCENT : 0xFFD6E0F0,
                     UiKit.dp(this, 8), 0));
@@ -148,34 +154,56 @@ public final class SetupActivity extends Activity {
         note.setGravity(Gravity.CENTER);
     }
 
-    private void renderBattery() {
-        LinearLayout root = stage("02 / BACKGROUND ACCESS",
-                "Keep protection running.",
-                "Set TextSentry battery usage to Unrestricted.", 2);
+    /** Optional for beta users, but a clear step before permission requests. */
+    private void renderSubscription() {
+        LinearLayout root = stage("02 / SUBSCRIPTION",
+                "Set up your subscription.", "Choose managed access or your own key.", 2);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.chip(this, card, SetupPermissions.unrestricted(this)
-                ? "✓ Battery optimization exemption detected" : "○ Check battery settings");
-        UiKit.button(this, card, "Open app battery settings", true, () ->
-                SetupPermissions.openBatterySettings(this));
-        UiKit.description(this, card, "Return here when finished.");
-        UiKit.button(this, root, "Continue", false, () -> {
-            SetupFlow.advance(this, SetupFlow.PERMISSIONS);
+        UiKit.heading(this, card, "TextSentry access");
+        UiKit.description(this, card,
+                "Review your subscription status before enabling monitoring.");
+        if (BuildConfig.WEB_CHECKOUT_ENABLED) {
+            UiKit.button(this, card, "Review plans and subscribe", true,
+                    () -> startActivity(new Intent(this, AccountActivity.class)));
+            UiKit.description(this, card,
+                    "Secure checkout opens in your browser. Payments may be real or test "
+                            + "depending on the build.");
+        } else {
+            UiKit.description(this, card,
+                    "Checkout is not available in this build. To subscribe, install the "
+                            + "subscription-enabled sideload version.");
+            UiKit.button(this, card, "View account", false,
+                    () -> startActivity(new Intent(this, AccountActivity.class)));
+        }
+        UiKit.button(this, root, "Continue to SMS permissions", false, () -> {
+            SetupFlow.completeSubscriptionPrompt(this);
             display();
         });
-        TextView note = UiKit.description(this, root,
-                "Optional for better reliability. Does not grant SMS access.");
-        note.setTextSize(12);
+        UiKit.description(this, root,
+                "You can continue without purchasing during the current beta.");
     }
 
     private void renderPermissions() {
-        LinearLayout root = stage("03 / SMS PERMISSIONS",
+        boolean extra = "sideload".equals(BuildConfig.FLAVOR)
+                && new AuthSessionStore(this).hasSession()
+                && !new KeyVault(this).hasKey();
+        LinearLayout root = stage(extra ? "03 / SMS PERMISSIONS" : "02 / SMS PERMISSIONS",
                 "Allow message access.",
-                "Let TextSentry check incoming texts. Replies are optional.", 3);
+                "Enable restricted settings if Android blocks SMS permissions.", extra ? 3 : 2);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, card, "1. Allow restricted settings");
+        UiKit.description(this, card,
+                "Open Android permission settings. On the app info screen, tap the "
+                        + "three-dot menu (⋮) → Allow restricted settings, then return "
+                        + "here. If that option is not shown, continue below.");
+        UiKit.button(this, card, "Android permission settings", true,
+                () -> SetupPermissions.openAppSettings(this));
+
+        UiKit.heading(this, card, "2. Grant SMS permissions");
         UiKit.chip(this, card, SetupPermissions.hasIncoming(this)
                 ? "✓ Incoming SMS allowed" : "○ Incoming SMS not allowed");
         if (!SetupPermissions.hasIncoming(this)) {
-            UiKit.button(this, card, "Allow incoming SMS", true,
+            UiKit.button(this, card, "Allow incoming SMS", false,
                     () -> SetupPermissions.requestIncoming(this, INCOMING_SMS_REQUEST));
         }
         UiKit.chip(this, card, SetupPermissions.hasOutgoing(this)
@@ -184,11 +212,9 @@ public final class SetupActivity extends Activity {
             UiKit.button(this, card, "Allow SMS replies (optional)", false,
                     () -> SetupPermissions.requestOutgoing(this, OUTGOING_SMS_REQUEST));
         }
-        UiKit.button(this, card, "Android permission settings", false, () ->
-                SetupPermissions.openAppSettings(this));
 
-        UiKit.button(this, root, "Continue", true, () -> {
-            SetupFlow.advance(this, SetupFlow.ACTIVATE);
+        UiKit.button(this, root, "Continue to battery settings", true, () -> {
+            SetupFlow.advance(this, SetupFlow.BATTERY);
             display();
         });
 
@@ -205,10 +231,37 @@ public final class SetupActivity extends Activity {
                 .setNegativeButton("Close", null).show());
     }
 
+    private void renderBattery() {
+        boolean extra = "sideload".equals(BuildConfig.FLAVOR)
+                && new AuthSessionStore(this).hasSession()
+                && !new KeyVault(this).hasKey();
+        LinearLayout root = stage(extra ? "04 / BACKGROUND ACCESS" : "03 / BACKGROUND ACCESS",
+                "Keep protection running.",
+                "After SMS permissions, set TextSentry battery use to Unrestricted.",
+                extra ? 4 : 3);
+        LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.chip(this, card, SetupPermissions.unrestricted(this)
+                ? "✓ Battery optimization exemption detected" : "○ Check battery settings");
+        UiKit.button(this, card, "Open app battery settings", true, () ->
+                SetupPermissions.openBatterySettings(this));
+        UiKit.description(this, card,
+                "Open Battery → choose Unrestricted (if offered), then return here.");
+        UiKit.button(this, root, "Continue to start monitoring", false, () -> {
+            SetupFlow.advance(this, SetupFlow.ACTIVATE);
+            display();
+        });
+        TextView note = UiKit.description(this, root,
+                "Optional for better reliability. Does not grant SMS access.");
+        note.setTextSize(12);
+    }
+
     private void renderActivation() {
-        LinearLayout root = stage("04 / START PROTECTION",
+        boolean extra = "sideload".equals(BuildConfig.FLAVOR)
+                && new AuthSessionStore(this).hasSession()
+                && !new KeyVault(this).hasKey();
+        LinearLayout root = stage(extra ? "05 / START PROTECTION" : "04 / START PROTECTION",
                 "You're in control.",
-                "Preview messages first. Automatic replies are optional.", 4);
+                "Preview messages first. Automatic replies are optional.", extra ? 5 : 4);
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.chip(this, card, SetupPermissions.hasIncoming(this)
                 ? "✓ Incoming SMS ready" : "○ Incoming SMS permission needed");
