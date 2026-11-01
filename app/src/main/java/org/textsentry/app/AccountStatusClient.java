@@ -13,9 +13,9 @@ final class AccountStatusClient {
         final boolean managedAccess;
         final String reason;
         final String expiresAt;
-        final boolean isSandbox;
+        final Boolean isSandbox;
         Status(String userId, String subscription, boolean managedAccess,
-               String reason, String expiresAt, boolean isSandbox) {
+               String reason, String expiresAt, Boolean isSandbox) {
             this.userId = userId;
             this.subscription = subscription;
             this.managedAccess = managedAccess;
@@ -24,12 +24,21 @@ final class AccountStatusClient {
             this.isSandbox = isSandbox;
         }
         boolean subscribed() { return "active".equals(subscription); }
+        boolean subscriptionValidForBuild(boolean sandboxBuild) {
+            return subscribed() && (Boolean.FALSE.equals(isSandbox)
+                    || (sandboxBuild && Boolean.TRUE.equals(isSandbox)));
+        }
         String label(boolean sandboxBuild) {
-            if (subscribed()) return sandboxBuild
-                    ? "TextSentry subscription active (sandbox)"
-                    : "TextSentry subscription active";
+            if (subscribed()) {
+                if (Boolean.TRUE.equals(isSandbox))
+                    return sandboxBuild ? "TextSentry subscription active (sandbox)"
+                            : "Sandbox subscription only — live subscription required";
+                if (Boolean.FALSE.equals(isSandbox))
+                    return "TextSentry subscription active";
+                return "Subscription environment unavailable";
+            }
             if ("unavailable".equals(subscription)) return "Subscription status unavailable";
-            if ("expired".equals(reason)) return isSandbox || sandboxBuild
+            if ("expired".equals(reason)) return Boolean.TRUE.equals(isSandbox) || sandboxBuild
                     ? "Sandbox subscription expired" : "Subscription expired";
             if ("missing_entitlement".equals(reason))
                 return "Purchase is missing the textsentry entitlement";
@@ -52,7 +61,9 @@ final class AccountStatusClient {
             return new Status(userId, subscription, data.optBoolean("managed_access", false),
                     data.optString("subscription_reason", ""),
                     data.optString("subscription_expires_at", ""),
-                    data.optBoolean("subscription_sandbox", false));
+                    data.isNull("subscription_sandbox") ? null
+                            : data.opt("subscription_sandbox") instanceof Boolean
+                            ? data.getBoolean("subscription_sandbox") : null);
         } catch (Exception ignored) {
             throw new IllegalArgumentException("Invalid account status");
         }
