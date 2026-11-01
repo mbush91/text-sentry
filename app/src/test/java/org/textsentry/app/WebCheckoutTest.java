@@ -11,6 +11,15 @@ public class WebCheckoutTest {
                 WebCheckout.purchaseUrl("abc/def ghi"));
     }
 
+    @Test public void sandboxCheckoutCanBeInjectedWithoutChangingIdentity() {
+        assertEquals("https://pay.rev.cat/sandbox/test_token/user-id",
+                WebCheckout.purchaseUrl("user-id", "https://pay.rev.cat/sandbox/test_token/"));
+        try {
+            WebCheckout.purchaseUrl("user-id", "https://evil.example/checkout/");
+            fail("Only RevenueCat checkout host is allowed");
+        } catch (IllegalArgumentException expected) {}
+    }
+
     @Test public void refusesAnonymousCheckout() {
         for (String id : new String[] {null, "", "  "}) {
             try {
