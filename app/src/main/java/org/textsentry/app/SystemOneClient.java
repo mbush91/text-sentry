@@ -17,7 +17,7 @@ public final class SystemOneClient {
     public static final String ENDPOINT = "https://api.typesafe.ai/v1/systemone";
     public static final String MODEL = "jev-latest";
     public static final String OPENROUTER_ENDPOINT = "https://openrouter.ai/api/alpha/decisions";
-    public static final String OPENROUTER_MODEL = "~typesafe/jev-latest";
+    public static final String OPENROUTER_MODEL = "typesafe/jev-1.14";
     public static final double APPROVAL_THRESHOLD = 0.95;
 
     /** Injectable transport keeps every PR test offline and deterministic. */
