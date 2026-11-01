@@ -21,7 +21,7 @@ public final class DataControl {
             throw new IllegalStateException("Could not erase encrypted message history", e);
         }
         for (String name : new String[] {"textsentry_settings", "textsentry_reply_ledger",
-                "textsentry_secrets", "textsentry_message_history"}) {
+                "textsentry_secrets", "textsentry_message_history", "textsentry_auth_session"}) {
             context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit();
         }
     }
