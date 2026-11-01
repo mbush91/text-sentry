@@ -33,6 +33,7 @@ public final class AccountActivity extends Activity {
     private AuthSessionStore sessions;
     private TextView status;
     private TextView subscriptionStatus;
+    private TextView revenueCatAccountId;
     private Button subscribeButton;
     private int authGeneration;
 
@@ -75,6 +76,7 @@ public final class AccountActivity extends Activity {
         if (!sessions.hasSession()) return;
         final int generation = authGeneration;
         final TextView label = subscriptionStatus;
+        final TextView accountId = revenueCatAccountId;
         if (label == null) return;
         label.setText("Checking subscription…");
         try {
@@ -109,6 +111,12 @@ public final class AccountActivity extends Activity {
                         label.setText(verified == null
                                 ? "Subscription status unavailable"
                                 : verified.label(sandbox));
+                        if (verified != null && accountId != null
+                                && revenueCatAccountId == accountId) {
+                            // Cognito sub is the RevenueCat App User ID. Select/copy it
+                            // to compare with the RevenueCat customer dashboard.
+                            accountId.setText("RevenueCat customer ID: " + verified.userId);
+                        }
                         if (subscribeButton != null) {
                             boolean active = verified != null && verified.subscribed();
                             subscribeButton.setEnabled(!active);
@@ -135,6 +143,8 @@ public final class AccountActivity extends Activity {
         refreshStatus();
         subscriptionStatus = UiKit.description(this, card,
                 sessions.hasSession() ? "Checking subscription…" : "");
+        revenueCatAccountId = UiKit.description(this, card, "");
+        revenueCatAccountId.setTextIsSelectable(true);
         subscribeButton = null;
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Switch Google account", false, this::startLogin);
