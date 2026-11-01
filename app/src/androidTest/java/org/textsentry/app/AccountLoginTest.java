@@ -47,6 +47,26 @@ public class AccountLoginTest {
         assertNotNull(context.getPackageManager().resolveActivity(redirect, 0));
     }
 
+    @Test public void billingReturnIsSideloadOnlyAndNeverAProofOfSubscription() throws Exception {
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        Intent intent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("textsentry://billing/return?app_user_id=untrusted"));
+        intent.addCategory(Intent.CATEGORY_BROWSABLE);
+        intent.addCategory(Intent.CATEGORY_DEFAULT);
+        assertTrue(AccountActivity.isBillingReturn(intent));
+        assertFalse(AccountActivity.isBillingReturn(new Intent(Intent.ACTION_VIEW,
+                Uri.parse("textsentry://auth/callback?code=untrusted"))));
+        assertFalse(AccountActivity.isBillingReturn(new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://example.com/billing/return"))));
+        if ("sideload".equals(BuildConfig.FLAVOR)) {
+            ActivityInfo activity = context.getPackageManager().getActivityInfo(
+                    new ComponentName(context, AccountActivity.class), 0);
+            assertTrue(activity.exported);
+            intent.setPackage(context.getPackageName());
+            assertNotNull(context.getPackageManager().resolveActivity(intent, 0));
+        }
+    }
+
     @Test public void managedKeyIsProcessMemoryOnlyAndCanBeCleared() {
         ManagedKeyMemory.clear();
         assertFalse(ManagedKeyMemory.hasActiveKey());
