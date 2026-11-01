@@ -69,6 +69,13 @@ final class SetupFlow {
         return sideloadBuild && googleSignedIn && !hasOwnKey && !promptSeen;
     }
 
+    /** An existing completed installation only revisits the wizard when
+     * checkout is enabled and the one-time subscription prompt is outstanding. */
+    static boolean shouldReturnHome(boolean setupComplete, boolean checkoutEnabled,
+                                    boolean needsSubscriptionPrompt) {
+        return setupComplete && !(checkoutEnabled && needsSubscriptionPrompt);
+    }
+
     static boolean subscriptionPromptSeen(Context context) {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getBoolean(SUBSCRIPTION_PROMPT_SEEN, false);

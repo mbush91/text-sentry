@@ -51,6 +51,13 @@ public class GuidedSetupTest {
         assertEquals(SetupFlow.ACTIVATE, SetupFlow.migrateLegacyStage(3));
     }
 
+    @Test public void existingUsersSeeOneTimePromptOnlyInCheckoutEnabledBuilds() {
+        assertFalse(SetupFlow.shouldReturnHome(true, true, true));
+        assertTrue(SetupFlow.shouldReturnHome(true, true, false));
+        assertTrue(SetupFlow.shouldReturnHome(true, false, true));
+        assertFalse(SetupFlow.shouldReturnHome(false, true, false));
+    }
+
     @Test public void subscriptionPromptIsRecordedIndependentlyOfPermissionSteps() {
         Context context = app();
         SetupFlow.reset(context);
