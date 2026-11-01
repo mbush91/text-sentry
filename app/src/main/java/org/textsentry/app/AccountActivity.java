@@ -169,6 +169,8 @@ public final class AccountActivity extends Activity {
                 UiKit.description(this, card,
                         "Checkout opens in your browser. Your own key remains a free option.");
             }
+            UiKit.button(this, card, "Refresh subscription", false,
+                    this::refreshSubscription);
             UiKit.button(this, card, "Refresh key", false, this::fetchManagedKey);
         }
         UiKit.description(this, root, "Your key stays in memory. No SMS goes to AWS.");
