@@ -58,13 +58,6 @@ public final class UiKit {
         }
         if (Build.VERSION.SDK_INT >= 30) {
             window.setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = window.getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsAppearance(
-                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
-                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
-                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            }
         } else {
             View decor = window.getDecorView();
             decor.setSystemUiVisibility((decor.getSystemUiVisibility()
@@ -91,6 +84,15 @@ public final class UiKit {
         frame.addView(statusScrim, new FrameLayout.LayoutParams(-1, 0, Gravity.TOP));
         a.setContentView(frame);
         if (Build.VERSION.SDK_INT >= 30) {
+            // PhoneWindow has no decor view before setContentView; obtaining its
+            // controller in styleSystemBars would crash when first opening the app.
+            WindowInsetsController controller = a.getWindow().getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsAppearance(
+                        WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                                | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            }
             frame.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
                 scroll.setPadding(0, bars.top, 0, bars.bottom);
