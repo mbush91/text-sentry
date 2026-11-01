@@ -17,8 +17,14 @@ public final class DeveloperActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (!SetupGate.enforce(this)) return;
         settings = new Settings(this);
         render();
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (!SetupGate.enforce(this)) return;
     }
 
     private void render() {
