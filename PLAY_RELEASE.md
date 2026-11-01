@@ -9,6 +9,8 @@
 
 Google Play's SMS policy requires active default SMS handler status or an individually approved exception for the restricted permissions. A hypothetical exception for *device automation* requires automation across multiple areas of Android; this app currently automates SMS only and should not claim it qualifies. A spam-blocking exception is also subject to Google review, not guaranteed. Do not change the manifest to mimic default-handler eligibility without implementing and testing a complete usable SMS/MMS client.
 
+Play onboarding stops at "Start reviewing" after Google/BYOK setup, without requesting Android SMS or background permissions. The sideload build has a separate four-stage guide for battery usage, optional outgoing SMS, incoming SMS and preview-only monitoring; Play must never adopt those permissions or monitoring pages.
+
 Both editions require Google-only Cognito sign-in or locally encrypted TypeSafe BYOK setup before accessing the app. First launch offers Google first with a small BYOK link. Google uses browser redirect with PKCE. It adds no SMS or Call Log permissions. Cognito stores account identity (including email) separately from locally encrypted account tokens; Google and AWS process sign-in information, and no SMS message is sent to the account API. The Play Data Safety disclosure and public privacy policy must cover Google account information, RAM-only OpenRouter keys, and direct transmission of user-consented analyzed text to **OpenRouter and downstream TypeSafe** in signed-in mode, or **TypeSafe directly** for BYOK. No SMS body is sent to AWS. The Play edition still requires explicit consent for every manual analysis; no automatic SMS permissions or sending.
 
 ## Build and verify
