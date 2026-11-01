@@ -9,12 +9,13 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (!SetupGate.enforce(this)) return;
         refresh();
-        Onboarding.offer(this);
     }
 
     @Override protected void onResume() {
         super.onResume();
+        if (!SetupGate.enforce(this)) return;
         // Keep the user's in-progress draft when returning from their SMS app.
         Settings settings = new Settings(this);
         if (lastSettingsGeneration != null &&

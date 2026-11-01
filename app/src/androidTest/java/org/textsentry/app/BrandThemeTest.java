@@ -33,8 +33,13 @@ public class BrandThemeTest {
         assertEquals(context.getColor(R.color.textsentry_cyan), UiKit.ACCENT);
     }
 
-    @Test public void launchWindowAndScrolledScreensUseReadableSystemBars() {
+    @Test public void launchWindowAndScrolledScreensUseReadableSystemBars() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        // MainActivity is protected; use a synthetic encrypted BYOK key to test
+        // its visual system bars without bypassing the onboarding gate.
+        new Settings(context); // Apply legacy-migration before the synthetic key.
+        KeyVault vault = new KeyVault(context);
+        vault.save("synthetic-theme-test");
         Intent intent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Activity activity = InstrumentationRegistry.getInstrumentation().startActivitySync(intent);
@@ -75,6 +80,7 @@ public class BrandThemeTest {
             }
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(activity::finish);
+            vault.clear();
         }
     }
 }

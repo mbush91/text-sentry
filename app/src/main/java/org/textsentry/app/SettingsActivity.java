@@ -27,132 +27,92 @@ public final class SettingsActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (!SetupGate.enforce(this)) return;
         settings = new Settings(this);
         vault = new KeyVault(this);
         confidence = settings.confidence();
 
-        root = UiKit.screen(this, "Your rules. Your decisions.", true);
-        LinearLayout account = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, account, "TextSentry account");
-        UiKit.description(this, account, AnalysisAccess.status(this));
-        UiKit.description(this, account,
-                "Google sign-in uses a $1/month managed Jev key. " +
-                "Otherwise you can use your own TypeSafe key below.");
-        UiKit.button(this, account, "Sign in / Manage account", false, () ->
-                startActivity(new Intent(this, AccountActivity.class)));
-
+        root = UiKit.screen(this, "Settings", true);
         LinearLayout provider = UiKit.card(this, root, 0xFFFFFFFF);
         TextView heading = UiKit.heading(this, provider, "AI connection");
-        // Easter egg: tap the AI connection heading seven times.
+        // Easter egg: seven taps still unlock encrypted developer diagnostics.
         heading.setOnClickListener(v -> {
             if (settings.developerMode()) return;
             if (++developerTaps >= 7) {
                 developerTaps = 0;
                 new AlertDialog.Builder(this)
                         .setTitle("Enable developer mode?")
-                        .setMessage("Developer mode keeps up to five complete Jev request and " +
-                                "response bodies locally, including sensitive SMS text and rules. " +
-                                "The log is encrypted; API keys are not included.")
+                        .setMessage("Stores up to five encrypted model requests and responses on this device.")
                         .setPositiveButton("Enable", (dialog, which) -> {
                             settings.setDeveloperMode(true);
                             refreshDeveloperCard();
-                            toast("Developer mode enabled");
                         }).setNegativeButton("Cancel", null).show();
             }
         });
-        UiKit.description(this, provider,
-                "Optional: bring your own TypeSafe key without an account. " +
-                "Saved only on this device. Google sign-in takes priority if connected.");
-        UiKit.chip(this, provider, "✓ Jev · latest model");
-        apiKey = UiKit.input(this, provider, "API key", "", false, true);
-        apiKey.setHint("Paste your TypeSafe API key");
+        UiKit.chip(this, provider, AnalysisAccess.status(this));
+        UiKit.button(this, provider, "Manage account", false, () ->
+                startActivity(new Intent(this, AccountActivity.class)));
+        apiKey = UiKit.input(this, provider, "Your TypeSafe key (optional)", "", false, true);
+        apiKey.setHint("API key");
         keyState = UiKit.description(this, provider, "");
         refreshKey();
-        UiKit.button(this, provider, "Remove stored API key", false, () ->
+        UiKit.button(this, provider, "Remove BYOK key", false, () ->
                 new AlertDialog.Builder(this)
-                        .setTitle("Remove API key?")
-                        .setMessage("This also pauses monitoring and automatic replies.")
+                        .setTitle("Remove your key?")
+                        .setMessage("Monitoring will pause if you aren't signed in.")
                         .setPositiveButton("Remove", (d, w) -> {
-                            settings.pause();
+                            if (!new AuthSessionStore(this).hasSession()) settings.pause();
                             vault.clear();
                             apiKey.setText("");
                             refreshKey();
+                            if (!SetupGate.hasAccess(this)) SetupGate.enforce(this);
                         }).setNegativeButton("Cancel", null).show());
 
         LinearLayout rules = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, rules, "Message categories");
-        UiKit.description(this, rules,
-                "Choose which types of unsolicited texts Jev should consider for a STOP reply. " +
-                "A message only needs to match one selected category.");
-        voteCategory = addCategory(rules, "Go vote reminders",
-                "Unsolicited nonpartisan reminders to vote.", MessageCategories.VOTE);
-        politicalCategory = addCategory(rules, "Political campaign messages",
-                "Candidate, party, fundraising or campaign texts.", MessageCategories.POLITICAL);
-        marketingCategory = addCategory(rules, "Marketing ads",
-                "Retail promotions, sales, coupons and advertising.", MessageCategories.MARKETING);
-        UiKit.description(this, rules,
-                "A message does not need to mention STOP or provide an unsubscribe option. " +
-                "Official voting information, security codes and personal texts remain excluded.");
-
-        UiKit.description(this, rules,
-                "Additional prompting, when configured, is combined after the selected " +
-                "categories in the same Jev request.");
+        UiKit.heading(this, rules, "Filter categories");
+        voteCategory = addCategory(rules, "Voting reminders", "", MessageCategories.VOTE);
+        politicalCategory = addCategory(rules, "Political campaigns", "", MessageCategories.POLITICAL);
+        marketingCategory = addCategory(rules, "Marketing", "", MessageCategories.MARKETING);
         generatedInstructions = UiKit.description(this, rules, "");
-        generatedInstructions.setMaxLines(12);
-        voteCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
-        politicalCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
-        marketingCategory.setOnCheckedChangeListener((b, checked) -> updatePreview());
-        updatePreview();
-        confidenceLabel = UiKit.description(this, rules,
-                "Minimum approval probability: " + confidence + "%");
+        generatedInstructions.setVisibility(android.view.View.GONE);
+        confidenceLabel = UiKit.description(this, rules, "Minimum match: " + confidence + "%");
         SeekBar slider = new SeekBar(this);
         slider.setMax(50);
         slider.setProgress(confidence - 50);
-        slider.setContentDescription("Minimum approval probability");
+        slider.setContentDescription("Minimum match confidence");
         rules.addView(slider);
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar s, int progress, boolean fromUser) {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
                 confidence = 50 + progress;
-                confidenceLabel.setText("Minimum approval probability: " + confidence + "%");
+                confidenceLabel.setText("Minimum match: " + confidence + "%");
             }
-            @Override public void onStartTrackingTouch(SeekBar s) {}
-            @Override public void onStopTrackingTouch(SeekBar s) {}
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {}
         });
-        UiKit.description(this, rules,
-                "Higher means fewer messages qualify. Default: 95%. Jev returns a yes probability, not a guarantee.");
+        UiKit.button(this, rules, "Save settings", true, this::save);
 
-        LinearLayout delete = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, delete, "Messages & storage");
-        UiKit.description(this, delete,
-                "Clear TextSentry's local decision history at any time. This does not delete SMS from your messaging inbox.");
-        UiKit.button(this, delete, "View message history", false, () ->
+        LinearLayout data = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, data, "Data & privacy");
+        UiKit.button(this, data, "History", false, () ->
                 startActivity(new Intent(this, HistoryActivity.class)));
-        UiKit.button(this, delete, "Clear local decision history", false, () ->
+        UiKit.button(this, data, "Clear history", false, () ->
                 new AlertDialog.Builder(this)
-                        .setTitle("Clear activity history?")
-                        .setMessage("Local decisions will be removed; your SMS inbox is unchanged.")
-                        .setPositiveButton("Clear history", (d, w) -> {
+                        .setTitle("Clear local history?")
+                        .setMessage("Only TextSentry history is deleted, not your SMS inbox.")
+                        .setPositiveButton("Clear", (d, w) -> {
                             settings.clearHistory();
-                            toast("Local history cleared");
+                            toast("History cleared");
                         }).setNegativeButton("Cancel", null).show());
-        UiKit.description(this, delete,
-                "Automatic deletion of original SMS requires TextSentry to become a complete default SMS app. That is not supported in this version.");
-
-        LinearLayout privacy = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, privacy, "Privacy");
-        UiKit.description(this, privacy,
-                "Messages you submit are evaluated by TypeSafe AI under its terms.");
-        UiKit.button(this, privacy, "View privacy policy", false, () -> startActivity(
+        UiKit.button(this, data, "Privacy policy", false, () -> startActivity(
                 new Intent(Intent.ACTION_VIEW, Uri.parse("https://textsentry.org/privacy.html"))));
-        UiKit.button(this, privacy, "Delete all TextSentry app data", false, () ->
+        UiKit.button(this, data, "Delete app data", false, () ->
                 new AlertDialog.Builder(this)
                         .setTitle("Erase TextSentry data?")
-                        .setMessage("Deletes settings, saved API key and local decisions. Does not delete carrier SMS or data already sent to TypeSafe.")
+                        .setMessage("Removes settings, keys and local history. Does not delete SMS.")
                         .setPositiveButton("Erase", (d, w) -> {
                             DataControl.deleteLocalData(this);
                             finish();
                         }).setNegativeButton("Cancel", null).show());
-        UiKit.button(this, root, "Save settings", true, this::save);
     }
 
     private CheckBox addCategory(LinearLayout parent, String title, String subtitle, int bit) {
@@ -163,7 +123,6 @@ public final class SettingsActivity extends Activity {
         box.setPadding(0, UiKit.dp(this, 10), 0, 0);
         box.setChecked((settings.categoryMask() & bit) != 0);
         parent.addView(box);
-        UiKit.description(this, parent, subtitle);
         return box;
     }
 
@@ -188,8 +147,8 @@ public final class SettingsActivity extends Activity {
 
     private void refreshKey() {
         keyState.setText(vault.hasKey()
-                ? "● API key saved securely. Leave the field empty to keep it."
-                : "○ No BYOK key saved. Google sign-in works without one.");
+                ? "✓ Own key saved"
+                : "Optional for signed-in users");
     }
 
     private void save() {
@@ -209,9 +168,9 @@ public final class SettingsActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (!SetupGate.enforce(this)) return;
         if (root != null) {
             refreshDeveloperCard();
-            updatePreview();
         }
     }
 
@@ -226,8 +185,7 @@ public final class SettingsActivity extends Activity {
         if (developerCard != null) return;
         developerCard = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, developerCard, "Developer mode");
-        UiKit.description(this, developerCard,
-                "Advanced prompting and encrypted Jev request/response traces.");
+
         UiKit.button(this, developerCard, "Open developer tools  →", true, () ->
                 startActivity(new Intent(this, DeveloperActivity.class)));
     }
