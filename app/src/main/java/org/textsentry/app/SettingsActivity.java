@@ -27,6 +27,7 @@ public final class SettingsActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        if (!SetupGate.enforce(this)) return;
         settings = new Settings(this);
         vault = new KeyVault(this);
         confidence = settings.confidence();
@@ -209,6 +210,7 @@ public final class SettingsActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (!SetupGate.enforce(this)) return;
         if (root != null) {
             refreshDeveloperCard();
             updatePreview();
