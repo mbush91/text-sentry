@@ -158,6 +158,20 @@ public class SystemOneClientTest {
         assertEquals(1, requests[0]);
     }
 
+    @Test public void evaluatedProbabilityIsPersistableWithOneApiRequest() throws Exception {
+        int[] requests = {0};
+        SystemOneClient client = new SystemOneClient((url, key, json) -> {
+            requests[0]++;
+            return result(0.874);
+        });
+        SystemOneClient.Evaluation evaluation = client.evaluate(
+                "key", SystemOneClient.MODEL, PROMPT, MESSAGE, "STOP", 0.85);
+        assertEquals(0.874, evaluation.confidence, 0.00001);
+        assertTrue(evaluation.decision.shouldReply);
+        assertEquals("STOP", evaluation.decision.reply);
+        assertEquals(1, requests[0]);
+    }
+
     @Test public void missingCredentialsDoNotCallProvider() throws Exception {
         SystemOneClient client = new SystemOneClient((url, key, json) -> {
             fail("A missing key must not result in a network request");

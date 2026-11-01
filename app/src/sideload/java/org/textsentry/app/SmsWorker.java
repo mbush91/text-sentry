@@ -1,7 +1,10 @@
 package org.textsentry.app;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.telephony.SmsManager;
 import androidx.annotation.NonNull;
@@ -42,27 +45,47 @@ public final class SmsWorker extends Worker {
                 return Result.success();
             }
 
-            AiDecision decision = new SystemOneClient().decide(key, SystemOneClient.MODEL,
-                    combinedInstructions, message, "STOP", settings.confidence() / 100.0);
+            SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
+                    key, SystemOneClient.MODEL, combinedInstructions,
+                    message, "STOP", settings.confidence() / 100.0);
             if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
                 return Result.success();
             }
+            AiDecision decision = evaluation.decision;
+            HistoryStore history = new HistoryStore(context);
             if (!decision.shouldReply) {
+                history.add(sender, message, evaluation.confidence, "", "no_reply", "sms");
                 settings.addHistory("AI: no reply");
             } else if (!settings.autoSend()) {
+                history.add(sender, message, evaluation.confidence, decision.reply, "preview", "sms");
                 settings.addHistory("Preview only: " + decision.reply);
             } else if (context.checkSelfPermission(Manifest.permission.SEND_SMS)
                     != PackageManager.PERMISSION_GRANTED) {
+                history.add(sender, message, evaluation.confidence, decision.reply, "blocked", "sms");
                 settings.addHistory("Blocked: send permission/consent missing");
             } else {
                 if (!ledger.reserveSend(sender, System.currentTimeMillis())) {
+                    history.add(sender, message, evaluation.confidence, decision.reply, "blocked", "sms");
                     settings.addHistory("Blocked: recipient daily reply limit");
                     return Result.success();
                 }
                 SmsManager manager = context.getSystemService(SmsManager.class);
                 if (manager == null) throw new IllegalStateException("SMS service unavailable");
-                manager.sendTextMessage(sender, null, decision.reply, null, null);
-                settings.addHistory("Submitted SMS reply: " + decision.reply);
+                // Audit before invoking carrier APIs. A queued send is NOT a confirmed send.
+                String historyId = history.add(sender, message, evaluation.confidence,
+                        decision.reply, "submitting", "sms");
+                Intent sentCallback = new Intent(context, SmsSentReceiver.class)
+                        .setAction(SmsSentReceiver.ACTION)
+                        .setData(Uri.parse("textsentry://sent/" + historyId));
+                PendingIntent sent = PendingIntent.getBroadcast(context, historyId.hashCode(),
+                        sentCallback, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                try {
+                    manager.sendTextMessage(sender, null, decision.reply, sent, null);
+                    settings.addHistory("SMS send submitted: " + decision.reply);
+                } catch (Exception failure) {
+                    history.markSendResult(historyId, false);
+                    throw failure;
+                }
             }
         } catch (Exception e) {
             settings.addHistory("No reply: provider or Android error");

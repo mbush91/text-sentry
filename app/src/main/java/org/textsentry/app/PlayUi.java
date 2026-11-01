@@ -21,6 +21,8 @@ public final class PlayUi {
                 "Review the texts you choose with TypeSafe AI. Nothing is analyzed until you ask.");
         UiKit.chip(activity, intro, vault.hasKey() ? "● TypeSafe ready · Jev latest"
                 : "○ TypeSafe setup needed");
+        UiKit.button(activity, intro, "View history  →", false, () ->
+                activity.startActivity(new Intent(activity, HistoryActivity.class)));
         UiKit.button(activity, intro, "Settings  →", false, () ->
                 activity.startActivity(new Intent(activity, SettingsActivity.class)));
 
@@ -75,11 +77,16 @@ public final class PlayUi {
             new Thread(() -> {
                 String status, suggestion;
                 try {
-                    AiDecision answer = new SystemOneClient().decide(vault.read(),
-                            SystemOneClient.MODEL, policy, input, "STOP", threshold);
+                    SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
+                            vault.read(), SystemOneClient.MODEL, policy, input, "STOP", threshold);
+                    AiDecision answer = evaluation.decision;
+                    new HistoryStore(activity).add("Manual review", input, evaluation.confidence,
+                            answer.shouldReply ? "STOP" : "",
+                            answer.shouldReply ? "manual_suggestion" : "no_reply", "manual");
                     status = answer.shouldReply
-                            ? "Suggested reply. Review before composing."
-                            : "No reply recommended.";
+                            ? "Suggested reply (" + Math.round(evaluation.confidence * 100)
+                                + "%). Review before composing."
+                            : "No reply recommended (" + Math.round(evaluation.confidence * 100) + "%).";
                     suggestion = answer.shouldReply ? "STOP" : "";
                 } catch (Exception ignored) {
                     status = "Analysis failed. Check your API key or connection.";
