@@ -75,6 +75,12 @@ jobs:
           "$APKSIGNER" verify --verbose "$APK"
           cp "$APK" "$RUNNER_TEMP/TextSentry-SANDBOX-checkout.apk"
 
+      - name: Audit sandbox post-purchase return integration
+        run: |
+          grep -F 'android:scheme="textsentry" android:host="billing"' app/src/sideload/AndroidManifest.xml
+          grep -F 'android:path="/return"' app/src/sideload/AndroidManifest.xml
+          grep -F 'subscription_status' app/src/main/java/org/textsentry/app/AccountStatusClient.java
+
       - name: Upload short-lived private test artifact (never a GitHub Release)
         uses: actions/upload-artifact@v7
         with:
