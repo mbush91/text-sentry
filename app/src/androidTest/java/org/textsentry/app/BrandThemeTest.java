@@ -48,7 +48,9 @@ public class BrandThemeTest {
                 assertEquals(UiKit.NIGHT, bars.getColor(0, Color.TRANSPARENT));
                 assertEquals(UiKit.BG, bars.getColor(1, Color.TRANSPARENT));
                 assertFalse(bars.getBoolean(2, true)); // white icons on navy
-                assertTrue(bars.getBoolean(3, false)); // dark icons on pale navigation
+                if (Build.VERSION.SDK_INT >= 27) {
+                    assertTrue(bars.getBoolean(3, false)); // dark icons on pale navigation
+                }
             } finally {
                 bars.recycle();
             }
