@@ -60,6 +60,15 @@ public final class MainActivity extends Activity {
             }
         }
 
+        LinearLayout account = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, account, "Your TextSentry account");
+        UiKit.description(this, account,
+                new AuthSessionStore(this).hasSession()
+                        ? "Google sign-in connected on this device."
+                        : "Sign up or sign in with Google through Cognito.");
+        UiKit.button(this, account, "Manage account  →", false, () ->
+                startActivity(new Intent(this, AccountActivity.class)));
+
         LinearLayout rule = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, rule, "Your rules");
         UiKit.description(this, rule, "Selected: " +
