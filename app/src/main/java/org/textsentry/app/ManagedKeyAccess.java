@@ -18,6 +18,7 @@ final class ManagedKeyAccess {
     static synchronized String obtain(Context context) throws Exception {
         String cached = ManagedKeyMemory.currentKey();
         if (cached != null) return cached;
+        long generation = ManagedKeyMemory.generation();
 
         AuthSessionStore sessions = new AuthSessionStore(context);
         AuthState state = sessions.load();
@@ -53,7 +54,9 @@ final class ManagedKeyAccess {
         if (current == null || !state.getRefreshToken().equals(current.getRefreshToken())) {
             throw new IOException("Account changed; sign in again");
         }
-        ManagedKeyMemory.install(fetched.key, fetched.expiresAtMillis);
+        if (!ManagedKeyMemory.installIfUnchanged(fetched.key, fetched.expiresAtMillis, generation)) {
+            throw new IOException("Account changed during key retrieval");
+        }
         return fetched.key;
     }
 }
