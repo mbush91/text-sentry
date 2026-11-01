@@ -38,7 +38,12 @@ public final class AccountActivity extends Activity {
         service = new AuthorizationService(this);
         sessions = new AuthSessionStore(this);
         render();
-        if (sessions.hasSession()) fetchManagedKey();
+        if (getIntent().getBooleanExtra("auto_login", false)
+                && state == null && !sessions.hasSession()) {
+            startLogin();
+        } else if (sessions.hasSession() && !getIntent().getBooleanExtra("welcome", false)) {
+            fetchManagedKey();
+        }
     }
 
     private void render() {
@@ -51,8 +56,11 @@ public final class AccountActivity extends Activity {
                 welcome ? "One account. Less spam." : "Manage your Google sign-in.");
         status = UiKit.description(this, card, "");
         refreshStatus();
-        UiKit.button(this, card, sessions.hasSession() ? "Switch Google account"
-                : "Continue with Google", true, this::startLogin);
+        if (sessions.hasSession()) {
+            UiKit.button(this, card, "Switch Google account", false, this::startLogin);
+        } else {
+            UiKit.googleSignInButton(this, card, this::startLogin);
+        }
         // BYOK entry lives on the required Setup screen; no settings bypass here.
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Sign out on this device", false, () ->
@@ -182,8 +190,14 @@ public final class AccountActivity extends Activity {
                             if (!isFinishing() && !isDestroyed()) {
                                 authGeneration++;
                                 ManagedKeyMemory.clear();
-                                render();
-                                fetchManagedKey();
+                                if (getIntent().getBooleanExtra("welcome", false)) {
+                                    // Return straight to the battery step, without a second
+                                    // account screen. Managed key remains RAM-only.
+                                    finish();
+                                } else {
+                                    render();
+                                    fetchManagedKey();
+                                }
                             }
                         });
                     } catch (Exception e) {
