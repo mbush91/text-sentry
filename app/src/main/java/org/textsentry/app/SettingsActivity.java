@@ -32,6 +32,14 @@ public final class SettingsActivity extends Activity {
         confidence = settings.confidence();
 
         root = UiKit.screen(this, "Your rules. Your decisions.", true);
+        LinearLayout account = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, account, "TextSentry account");
+        UiKit.description(this, account,
+                "Create an account or sign in securely with Google. This does not change your " +
+                "current TypeSafe key or enable automatic replies.");
+        UiKit.button(this, account, "Sign in / Manage account", false, () ->
+                startActivity(new Intent(this, AccountActivity.class)));
+
         LinearLayout provider = UiKit.card(this, root, 0xFFFFFFFF);
         TextView heading = UiKit.heading(this, provider, "AI connection");
         // Easter egg: tap the AI connection heading seven times.
