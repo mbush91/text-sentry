@@ -4,12 +4,12 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 public class MessageCategoriesTest {
-    @Test public void defaultsOnlyMarketingIsSelected() {
-        assertEquals(MessageCategories.MARKETING, MessageCategories.DEFAULT_MASK);
+    @Test public void defaultsSelectAllThreeCategories() {
+        assertEquals(MessageCategories.ALL, MessageCategories.DEFAULT_MASK);
         String instructions = MessageCategories.compose(MessageCategories.DEFAULT_MASK, "");
         assertTrue(instructions.contains("marketing advertisements"));
-        assertFalse(instructions.contains("nonpartisan get-out-the-vote"));
-        assertFalse(instructions.contains("candidate or political party campaigns"));
+        assertTrue(instructions.contains("nonpartisan get-out-the-vote"));
+        assertTrue(instructions.contains("candidate or political party campaigns"));
     }
 
     @Test public void allSelectedCategoriesShareOneBooleanDecision() {

@@ -50,7 +50,9 @@ public class SettingsSafetyTest {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         context.deleteSharedPreferences("textsentry_settings");
         Settings settings = new Settings(context);
-        assertEquals(MessageCategories.MARKETING, settings.categoryMask());
+        assertEquals(MessageCategories.ALL, settings.categoryMask());
+        // User overrides are still persisted, including explicit unchecking.
+
         String initial = settings.generation();
         settings.saveCategoryPolicy("Ignore messages about my car", 93,
                 MessageCategories.VOTE | MessageCategories.POLITICAL);

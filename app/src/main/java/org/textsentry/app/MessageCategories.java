@@ -9,7 +9,7 @@ public final class MessageCategories {
     public static final int POLITICAL = 2;
     public static final int MARKETING = 4;
     public static final int ALL = VOTE | POLITICAL | MARKETING;
-    public static final int DEFAULT_MASK = MARKETING;
+    public static final int DEFAULT_MASK = ALL;
 
     private MessageCategories() {}
 
