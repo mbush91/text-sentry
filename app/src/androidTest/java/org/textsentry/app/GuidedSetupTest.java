@@ -36,6 +36,7 @@ public class GuidedSetupTest {
 
     @Test public void deletionClearsCompletedSetup() throws Exception {
         Context context = app();
+        new KeyVault(context).save("synthetic-reset-test");
         SetupFlow.complete(context);
         assertTrue(SetupFlow.isComplete(context));
         DataControl.deleteLocalData(context);
