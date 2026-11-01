@@ -16,22 +16,17 @@ public final class PlayUi {
         LinearLayout root = UiKit.screen(activity, "Less noise. More signal.", false);
 
         LinearLayout intro = UiKit.card(activity, root, UiKit.HIGHLIGHT);
-        UiKit.heading(activity, intro, "A calmer way to message");
-        UiKit.description(activity, intro,
-                "Review only the texts you choose. Nothing is analyzed until you ask.");
+        UiKit.heading(activity, intro, "Message review");
         UiKit.chip(activity, intro, AnalysisAccess.status(activity));
-        UiKit.button(activity, intro, "View history  →", false, () ->
+        UiKit.button(activity, intro, "History", false, () ->
                 activity.startActivity(new Intent(activity, HistoryActivity.class)));
-        UiKit.button(activity, intro, "Google account / Sign up  →", false, () ->
-                activity.startActivity(new Intent(activity, AccountActivity.class)));
-        UiKit.button(activity, intro, "Settings  →", false, () ->
+        UiKit.button(activity, intro, "Settings", false, () ->
                 activity.startActivity(new Intent(activity, SettingsActivity.class)));
+        UiKit.button(activity, intro, "Account", false, () ->
+                activity.startActivity(new Intent(activity, AccountActivity.class)));
 
         LinearLayout review = UiKit.card(activity, root, 0xFFFFFFFF);
-        UiKit.heading(activity, review, "Review a message");
-        UiKit.description(activity, review,
-                "Selected: " + MessageCategories.summary(settings.categoryMask()) +
-                ". Paste or share a text, then opt in to analysis.");
+        UiKit.heading(activity, review, "Analyze a message");
         String incoming = "";
         Intent incomingIntent = activity.getIntent();
         if (Intent.ACTION_SEND.equals(incomingIntent.getAction())
@@ -41,12 +36,10 @@ public final class PlayUi {
         }
         EditText message = UiKit.input(activity, review, "Message", incoming, true, false);
         CheckBox consent = new CheckBox(activity);
-        consent.setText("I agree to send this text directly to TypeSafe Jev " +
-                "(through OpenRouter when signed in). Provider privacy terms apply.");
+        consent.setText("Send this text to the AI provider for analysis");
         consent.setChecked(false);
         review.addView(consent);
-        TextView outcome = UiKit.description(activity, review,
-                "Ready when you are. This app never monitors or sends SMS automatically.");
+        TextView outcome = UiKit.description(activity, review, "");
         EditText response = UiKit.input(activity, review, "Suggested reply (editable)", "", true, false);
         UiKit.button(activity, review, "Analyze message", true, () -> {
             if (!consent.isChecked()) {
@@ -104,9 +97,7 @@ public final class PlayUi {
         });
 
         LinearLayout compose = UiKit.card(activity, root, 0xFFFFFFFF);
-        UiKit.heading(activity, compose, "Send only if you choose");
-        UiKit.description(activity, compose,
-                "The Play edition opens your usual SMS app. Sending always remains your choice.");
+        UiKit.heading(activity, compose, "Optional reply");
         EditText number = UiKit.input(activity, compose, "Recipient number", "", false, false);
         UiKit.button(activity, compose, "Open SMS composer  ↗", false, () -> {
             String to = number.getText().toString().trim();
@@ -126,12 +117,5 @@ public final class PlayUi {
             }
         });
 
-        LinearLayout footer = UiKit.card(activity, root, 0xFFFFFFFF);
-        UiKit.heading(activity, footer, "You stay in control");
-        UiKit.description(activity, footer,
-                "Jev latest · " + settings.confidence() +
-                "% minimum match probability. Manage categories, instructions, and local history in Settings.");
-        UiKit.button(activity, footer, "Open settings", false, () ->
-                activity.startActivity(new Intent(activity, SettingsActivity.class)));
     }
 }
