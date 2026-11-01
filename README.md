@@ -83,6 +83,14 @@ CI's `TYPESAFE_AI_API_KEY` is for synthetic integration tests only. It is never 
 
 For Google Play release preparation, see [PLAY_RELEASE.md](PLAY_RELEASE.md), [PRIVACY.md](PRIVACY.md), and [AGENTS.md](AGENTS.md).
 
+## RevenueCat Web Purchase Link (sideload preparation)
+
+The independent sideload flavor has an identified-user checkout integration using the RevenueCat Web Purchase Link `https://pay.rev.cat/mimrlvpobvqnjikw/`. The checkout URL must **never** be opened directly as a generic shared link: the app gets the Cognito `sub` from its authenticated `GET /v1/me` response and URL-encodes it into `https://pay.rev.cat/mimrlvpobvqnjikw/<cognito-sub>`. Checkout opens in the device browser and does not receive Cognito bearer tokens or SMS. The product is `textsentry_monthly`, with entitlement `textsentry`.
+
+**Not live yet.** To prevent taking money before the backend validates paid entitlements, the checkout button is omitted from ordinary release builds. Set `TEXTSENTRY_ENABLE_WEB_CHECKOUT=true` **at build time** for controlled sideload testing only; the Play flavor always excludes this web-checkout button. Signed releases built by normal main CI remain disabled until checkout-to-entitlement verification is complete. Sandbox purchases require RevenueCat's **separate sandbox URL**, which must not be distributed publicly. The provided link has not been independently verified as production or sandbox.
+
+Before activating customer checkout: verify RevenueCat/Stripe live setup and the separate sandbox checkout end-to-end, verify subscription `textsentry` with the same Cognito `sub`, verify AWS RevenueCat secret and key issuance, and then deliberately enable `EnforceSubscriptions: 'true'` in IaC. Until then the backend beta setting bypasses subscription checks. Do not interpret a successful key fetch while enforcement is disabled as proof of payment. BYOK remains independent and free. Do not expose a website-wide generic purchase link that lacks a signed-in user identity.
+
 ## Signing and release
 
 Configure GitHub Actions repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to enable optional signed release publishing on main. Until configured, the signed-release job skips publication while debug APK artifacts still work. Protect main with required quality and emulator checks; merely defining workflows is not branch protection.
