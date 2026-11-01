@@ -137,7 +137,8 @@ public final class MainActivity extends Activity {
                 try {
                     SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
                             vault.read(), SystemOneClient.MODEL, ruleText,
-                            content, "STOP", threshold / 100.0);
+                            content, "STOP", threshold / 100.0,
+                            DeveloperMode.traceSink(this, "sample"));
                     answer = (evaluation.decision.shouldReply ? "Suggested reply: STOP" :
                             "No reply suggested.") + " Jev match: " +
                             Math.round(evaluation.confidence * 100) + "%.";
