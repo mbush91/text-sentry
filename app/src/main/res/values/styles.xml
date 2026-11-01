@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Platform-native theme for both flavors, including before the first Activity draw. -->
+    <style name="Theme.TextSentry" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/textsentry_night</item>
+        <item name="android:statusBarColor">@color/textsentry_night</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@color/textsentry_paper</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:colorAccent">@color/textsentry_cyan</item>
+        <item name="android:colorControlHighlight">@color/textsentry_highlight</item>
+        <item name="android:textColorPrimary">@color/textsentry_ink</item>
+    </style>
+</resources>
