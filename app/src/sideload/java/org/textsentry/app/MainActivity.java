@@ -33,7 +33,9 @@ public final class MainActivity extends Activity {
         UiKit.heading(this, status, "Your inbox, in your hands");
         UiKit.description(this, status, "TypeSafe AI · Jev latest");
         UiKit.chip(this, status, vault.hasKey() ? "● API key ready" : "○ Setup needed");
-        String state = !settings.monitoring() ? "Monitoring paused"
+        String state = settings.monitoring() && !hasReceivePermission()
+                ? "Monitoring blocked: SMS permission missing"
+                : !settings.monitoring() ? "Monitoring paused"
                 : settings.autoSend() ? "Automatic replies enabled" : "Preview mode active";
         TextView headline = UiKit.text(this, state, 22, UiKit.INK, true);
         headline.setPadding(0, UiKit.dp(this, 22), 0, 0);
@@ -69,23 +71,37 @@ public final class MainActivity extends Activity {
                 startActivity(new Intent(this, SettingsActivity.class)));
 
         LinearLayout permissions = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, permissions, "SMS permissions");
-        boolean canReceive = checkSelfPermission(Manifest.permission.RECEIVE_SMS)
-                == PackageManager.PERMISSION_GRANTED;
-        boolean canSend = checkSelfPermission(Manifest.permission.SEND_SMS)
-                == PackageManager.PERMISSION_GRANTED;
+        UiKit.heading(this, permissions, "Setup & Android permissions");
+        boolean canReceive = hasReceivePermission();
+        boolean canSend = hasSendPermission();
         UiKit.description(this, permissions,
-                "Receive incoming SMS: " + (canReceive ? "Granted" : "Not granted"));
-        if (!canReceive) UiKit.button(this, permissions, "Allow SMS monitoring", false,
+                "Incoming SMS monitoring: " + (canReceive ? "✓ Allowed" : "○ Permission missing"));
+        if (!canReceive) UiKit.button(this, permissions, "Request incoming SMS access", false,
                 () -> requestPermissions(new String[]{Manifest.permission.RECEIVE_SMS}, 102));
         UiKit.description(this, permissions,
-                "Send SMS: " + (canSend ? "Granted" : "Not granted"));
-        if (!canSend) UiKit.button(this, permissions, "Allow SMS sending", false,
+                "Optional SMS replies: " + (canSend ? "✓ Allowed" : "○ Permission missing"));
+        if (!canSend) UiKit.button(this, permissions, "Request outgoing SMS access", false,
                 () -> requestPermissions(new String[]{Manifest.permission.SEND_SMS}, 103));
         UiKit.description(this, permissions,
-                "Sending remains OFF until you separately enable auto-replies. " +
-                "Original SMS deletion requires a complete default SMS app; " +
-                "TextSentry does not request that role or delete inbox messages.");
+                "Android may block SMS permission prompts because these are restricted " +
+                "permissions. A missing permission means monitoring or sending cannot work.");
+        UiKit.button(this, permissions, "Open TextSentry app permissions", false,
+                () -> PermissionSetup.openAppDetails(this));
+        UiKit.button(this, permissions, "SMS permission troubleshooting", false,
+                this::showPermissionHelp);
+
+        boolean batteryExempt = PermissionSetup.batteryOptimizationsExempt(this);
+        UiKit.description(this, permissions, "Background battery optimization: " +
+                (batteryExempt ? "Exempt (Android)" : "Not exempt (Android)"));
+        UiKit.description(this, permissions,
+                "Optional: If background analysis is delayed, go to Android app info > " +
+                "Battery / App battery usage > Unrestricted, where available. " +
+                "Battery access cannot grant SMS permissions.");
+        UiKit.button(this, permissions, "Open battery optimization settings", false,
+                () -> PermissionSetup.openBatterySettings(this));
+        UiKit.description(this, permissions,
+                "Permission grants do not enable automatic replies. Auto-replies require " +
+                "separate consent, and TextSentry never deletes original inbox messages.");
 
         LinearLayout preview = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, preview, "Test a message");
@@ -144,14 +160,33 @@ public final class MainActivity extends Activity {
                 "Sensitive history stays encrypted on this device; no inbox deletion is performed.");
     }
 
+    private boolean hasReceivePermission() {
+        return checkSelfPermission(Manifest.permission.RECEIVE_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasSendPermission() {
+        return checkSelfPermission(Manifest.permission.SEND_SMS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void showPermissionHelp() {
+        new AlertDialog.Builder(this)
+                .setTitle("Android SMS permission help")
+                .setMessage(PermissionSetup.smsHelpText())
+                .setPositiveButton("Open app info", (dialog, which) ->
+                        PermissionSetup.openAppDetails(this))
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
     private void startPreview() {
         if (!vault.hasKey()) {
             Toast.makeText(this, "Add a TypeSafe key in Settings first", Toast.LENGTH_LONG).show();
             startActivity(new Intent(this, SettingsActivity.class));
             return;
         }
-        if (checkSelfPermission(Manifest.permission.RECEIVE_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
+        if (!hasReceivePermission()) {
             requestPermissions(new String[]{ Manifest.permission.RECEIVE_SMS }, 100);
             return;
         }
@@ -160,12 +195,15 @@ public final class MainActivity extends Activity {
     }
 
     private void confirmAutoSend() {
+        if (!hasReceivePermission()) {
+            showPermissionHelp();
+            return;
+        }
         new AlertDialog.Builder(this)
                 .setTitle("Enable automatic replies?")
                 .setMessage("TextSentry may send STOP to eligible SMS senders when Jev's approval probability meets your threshold. A wrong decision may confirm your number is active; carrier charges may apply. You can pause at any time.")
                 .setPositiveButton("Enable", (dialog, which) -> {
-                    if (checkSelfPermission(Manifest.permission.SEND_SMS)
-                            != PackageManager.PERMISSION_GRANTED) {
+                    if (!hasSendPermission()) {
                         requestPermissions(new String[]{ Manifest.permission.SEND_SMS }, 101);
                     } else {
                         settings.setAutomation(true, true);
@@ -182,13 +220,13 @@ public final class MainActivity extends Activity {
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
         if (requestCode == 100 && granted && vault.hasKey()) {
             settings.setAutomation(true, false);
-        } else if (requestCode == 101 && granted && settings.monitoring()) {
+        } else if (requestCode == 101 && granted && settings.monitoring()
+                && hasReceivePermission()) {
             settings.setAutomation(true, true);
-        } else if ((requestCode == 102 || requestCode == 103) && !granted) {
-            Toast.makeText(this, "Permission denied. No changes made.", Toast.LENGTH_LONG).show();
-        } else if ((requestCode == 100 || requestCode == 101) && !granted) {
-            Toast.makeText(this, "Permission not granted. No change made.", Toast.LENGTH_LONG).show();
         }
         showHome();
+        if (requestCode >= 100 && requestCode <= 103 && !granted) {
+            showPermissionHelp();
+        }
     }
 }
