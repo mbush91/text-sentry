@@ -12,6 +12,7 @@ final class SetupFlow {
     private static final String PREFS = "textsentry_setup_flow";
     private static final String STEP = "step";
     private static final String DONE = "completed";
+    private static final String SUBSCRIPTION_PROMPT_SEEN = "subscription_prompt_seen";
 
     private SetupFlow() {}
 
@@ -43,6 +44,28 @@ final class SetupFlow {
         if (!SetupGate.hasAccess(context)) return;
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .edit().putInt(STEP, ACTIVATE).putBoolean(DONE, true).commit();
+    }
+
+    /** A one-time optional checkout step, separate from the saved permission stage. */
+    static boolean shouldPromptSubscription(boolean googleSignedIn, boolean hasOwnKey,
+                                            boolean checkoutEnabled, boolean promptSeen) {
+        return checkoutEnabled && googleSignedIn && !hasOwnKey && !promptSeen;
+    }
+
+    static boolean subscriptionPromptSeen(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean(SUBSCRIPTION_PROMPT_SEEN, false);
+    }
+
+    static boolean needsSubscriptionPrompt(Context context) {
+        return shouldPromptSubscription(new AuthSessionStore(context).hasSession(),
+                new KeyVault(context).hasKey(),
+                BuildConfig.WEB_CHECKOUT_ENABLED, subscriptionPromptSeen(context));
+    }
+
+    static void completeSubscriptionPrompt(Context context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(SUBSCRIPTION_PROMPT_SEEN, true).commit();
     }
 
     static void reset(Context context) {
