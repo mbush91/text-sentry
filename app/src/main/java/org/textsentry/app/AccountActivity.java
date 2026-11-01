@@ -243,7 +243,8 @@ public final class AccountActivity extends Activity {
                 new Thread(() -> {
                     String url = null;
                     try {
-                        url = WebCheckout.purchaseUrl(WebCheckout.fetchUserId(accessToken));
+                        url = WebCheckout.purchaseUrl(WebCheckout.fetchUserId(accessToken),
+                                BuildConfig.WEB_CHECKOUT_URL);
                     } catch (Exception ignored) {
                         // Do not include tokens, account identifiers or HTTP responses in UI errors.
                     }
