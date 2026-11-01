@@ -4,6 +4,18 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
     <application>
+        <!-- Separate from the AppAuth textsentry://auth/callback handler.
+             Browser return is informational; subscription is always verified by AWS. -->
+        <activity android:name=".AccountActivity" android:exported="true"
+                  android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="textsentry" android:host="billing"
+                      android:path="/return" />
+            </intent-filter>
+        </activity>
         <receiver android:name=".SmsSentReceiver" android:exported="false" />
         <receiver android:name=".SmsReceiver" android:exported="true"
                   android:permission="android.permission.BROADCAST_SMS">
