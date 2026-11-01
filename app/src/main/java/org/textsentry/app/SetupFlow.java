@@ -48,8 +48,8 @@ final class SetupFlow {
 
     /** A one-time optional checkout step, separate from the saved permission stage. */
     static boolean shouldPromptSubscription(boolean googleSignedIn, boolean hasOwnKey,
-                                            boolean checkoutEnabled, boolean promptSeen) {
-        return checkoutEnabled && googleSignedIn && !hasOwnKey && !promptSeen;
+                                            boolean sideloadBuild, boolean promptSeen) {
+        return sideloadBuild && googleSignedIn && !hasOwnKey && !promptSeen;
     }
 
     static boolean subscriptionPromptSeen(Context context) {
@@ -60,7 +60,7 @@ final class SetupFlow {
     static boolean needsSubscriptionPrompt(Context context) {
         return shouldPromptSubscription(new AuthSessionStore(context).hasSession(),
                 new KeyVault(context).hasKey(),
-                BuildConfig.WEB_CHECKOUT_ENABLED, subscriptionPromptSeen(context));
+                "sideload".equals(BuildConfig.FLAVOR), subscriptionPromptSeen(context));
     }
 
     static void completeSubscriptionPrompt(Context context) {
