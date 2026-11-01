@@ -18,10 +18,18 @@ android {
             // Explicit opt-in until sandbox checkout and paid entitlement enforcement pass.
             buildConfigField("boolean", "WEB_CHECKOUT_ENABLED",
                 (System.getenv("TEXTSENTRY_ENABLE_WEB_CHECKOUT") == "true").toString())
+            val checkoutUrl = System.getenv("TEXTSENTRY_WEB_CHECKOUT_URL")
+                ?: "https://pay.rev.cat/mimrlvpobvqnjikw/"
+            require(checkoutUrl.matches(Regex("https://pay[.]rev[.]cat/[A-Za-z0-9_/-]+"))) {
+                "RevenueCat checkout must be an official pay.rev.cat purchase link"
+            }
+            buildConfigField("String", "WEB_CHECKOUT_URL",
+                "\"" + checkoutUrl.trimEnd('/') + "/\"")
         }
         create("play") {
             dimension = "distribution"
             buildConfigField("boolean", "WEB_CHECKOUT_ENABLED", "false")
+            buildConfigField("String", "WEB_CHECKOUT_URL", "\"\"")
         }
     }
     buildFeatures { buildConfig = true }
