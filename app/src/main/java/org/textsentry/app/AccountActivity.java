@@ -76,6 +76,7 @@ public final class AccountActivity extends Activity {
                             .setPositiveButton("Sign out", (dialog, which) -> {
                                 try {
                                     authGeneration++;
+                                    new Settings(this).pause();
                                     ManagedKeyMemory.clear();
                                     sessions.clear();
                                     render();
@@ -95,7 +96,7 @@ public final class AccountActivity extends Activity {
         UiKit.description(this, info,
                 "Account tokens are encrypted using Android Keystore and cleared on sign-out " +
                 "or Delete all app data. Your managed OpenRouter key is fetched only into " +
-                "RAM and disappears on process restart or sign-out.");
+                "RAM and disappears on process restart or sign-out. Signing out pauses monitoring.");
         UiKit.button(this, info, "Refresh managed key", false, this::fetchManagedKey);
     }
 
@@ -116,6 +117,7 @@ public final class AccountActivity extends Activity {
 
     private void startLogin() {
         authGeneration++;
+        new Settings(this).pause(); // Don't keep queued SMS work across account switches.
         ManagedKeyMemory.clear();
         status.setText("Connecting securely to TextSentry…");
         new Thread(() -> {
