@@ -34,6 +34,24 @@ public class GuidedSetupTest {
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.ACTIVATE, false));
     }
 
+    @Test public void checkoutEnabledGoogleUsersSeeSubscriptionBeforePermissions() {
+        assertTrue(SetupFlow.shouldPromptSubscription(true, false, true, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, false, true, true));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, false, false, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(false, true, true, false));
+        assertFalse(SetupFlow.shouldPromptSubscription(true, true, true, false));
+    }
+
+    @Test public void subscriptionPromptIsRecordedIndependentlyOfPermissionSteps() {
+        Context context = app();
+        SetupFlow.reset(context);
+        assertFalse(SetupFlow.subscriptionPromptSeen(context));
+        SetupFlow.completeSubscriptionPrompt(context);
+        assertTrue(SetupFlow.subscriptionPromptSeen(context));
+        assertFalse(SetupFlow.isComplete(context));
+        SetupFlow.reset(context);
+    }
+
     @Test public void deletionClearsCompletedSetup() throws Exception {
         Context context = app();
         new KeyVault(context).save("synthetic-reset-test");
