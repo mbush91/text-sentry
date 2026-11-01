@@ -11,7 +11,7 @@ public class AccountStatusClientTest {
         assertFalse(beta.subscribed());
 
         AccountStatusClient.Status subscribed = AccountStatusClient.parse(
-                "{\"user_id\":\"cognito-sub\",\"managed_access\":true,\"subscription_required\":false,\"subscription_status\":\"active\"}");
+                "{\"user_id\":\"cognito-sub\",\"managed_access\":true,\"subscription_required\":false,\"subscription_status\":\"active\",\"subscription_sandbox\":true}");
         assertTrue(subscribed.subscribed());
         assertEquals("TextSentry subscription active (sandbox)", subscribed.label(true));
     }
