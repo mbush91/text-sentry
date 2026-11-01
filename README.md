@@ -103,6 +103,14 @@ Install the artifact only on a controlled test device. It shares the standard `o
 
 Before activating customer checkout: verify RevenueCat/Stripe live setup and the separate sandbox checkout end-to-end, verify subscription `textsentry` with the same Cognito `sub`, verify AWS RevenueCat secret and key issuance, and then deliberately enable `EnforceSubscriptions: 'true'` in IaC. Until then the backend beta setting bypasses subscription checks. Do not interpret a successful key fetch while enforcement is disabled as proof of payment. BYOK remains independent and free. Do not expose a website-wide generic purchase link that lacks a signed-in user identity.
 
+## Subscription status and return to app
+
+RevenueCat Web Purchase Links **do not automatically return to Android** using the default success page. In the RevenueCat dashboard for the TextSentry Purchase Link, select **Funnels → Purchase Links → TextSentry checkout → Success behavior → Redirect to a custom success page**, and use the exact redirect **`textsentry://billing/return`**. For returning customers choose **Show the success page**. Both production and sandbox links for that purchase-link configuration use the configured success behavior. This is a **RevenueCat dashboard change**; Android cannot override it just by appending query parameters.
+
+The sideload APK alone registers the exact custom-scheme return. Cognito sign-in still uses `textsentry://auth/callback` via AppAuth. On browser return, or when a customer manually comes back to the app, **Account** refreshes `GET /v1/me` with Cognito authentication and shows **TextSentry subscription active**, **Not subscribed**, or **Subscription status unavailable**. Sandbox test builds label an active subscription as **(sandbox)**. Deep-link query parameters (including `app_user_id`) are **never** proof of payment. Android does not enable managed keys based on the checkout return.
+
+The corresponding `text-sentry-iac` Lambda update must be deployed via CloudFormation Git sync, and the RevenueCat secret API key must be configured in AWS Secrets Manager. Prior versions of the API have no `subscription_status` field; the app deliberately shows *unavailable* rather than guessing. `EnforceSubscriptions: 'false'` stays unchanged until full end-to-end paid verification, so key access alone cannot prove a subscription.
+
 ## Signing and release
 
 Configure GitHub Actions repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to enable optional signed release publishing on main. Until configured, the signed-release job skips publication while debug APK artifacts still work. Protect main with required quality and emulator checks; merely defining workflows is not branch protection.
