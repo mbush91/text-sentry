@@ -9,10 +9,10 @@ public class CognitoConfigTest {
             "https://textsentry-prod-123456789012.auth.us-east-1.amazoncognito.com";
 
     @Test public void acceptsCognitoConfigurationForExpectedAndroidCallback() throws Exception {
-        CognitoConfig config = CognitoConfig.parse("{\"client_id\":\"public-client-123\","
+        CognitoConfig config = CognitoConfig.parse("{\"client_id\":\"publicclient123\","
                 + "\"authorization_server\":\"" + DOMAIN + "\","
                 + "\"redirect_uri\":\"textsentry://auth/callback\"}");
-        assertEquals("public-client-123", config.clientId);
+        assertEquals("publicclient123", config.clientId);
         assertEquals(DOMAIN + "/oauth2/authorize", config.authorizationEndpoint());
         assertEquals(DOMAIN + "/oauth2/token", config.tokenEndpoint());
         assertEquals("textsentry://auth/callback", config.redirectUri);
