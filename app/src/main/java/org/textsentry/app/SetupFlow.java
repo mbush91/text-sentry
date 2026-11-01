@@ -6,8 +6,8 @@ import android.content.SharedPreferences;
 /** Guided onboarding state. Never substitutes for live permission checks. */
 final class SetupFlow {
     static final int LOGIN = 0;
-    static final int BATTERY = 1;
-    static final int PERMISSIONS = 2;
+    static final int PERMISSIONS = 1;
+    static final int BATTERY = 2;
     static final int ACTIVATE = 3;
     private static final String PREFS = "textsentry_setup_flow";
     private static final String STEP = "step";
@@ -23,7 +23,7 @@ final class SetupFlow {
 
     static int validatedStage(int saved, boolean authenticated) {
         if (!authenticated) return LOGIN;
-        return Math.max(BATTERY, Math.min(ACTIVATE, saved));
+        return Math.max(PERMISSIONS, Math.min(ACTIVATE, saved));
     }
 
     static int stage(Context context) {
