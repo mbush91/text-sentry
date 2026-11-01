@@ -141,7 +141,7 @@ public class SystemOneClientTest {
         SystemOneClient client = new SystemOneClient((url, key, body) -> {
             requests[0]++;
             JSONObject payload = new JSONObject(body);
-            assertEquals("Early voting starts tomorrow. Make your voice heard!",
+            assertEquals("Make a plan to vote this Tuesday! Every voice matters.",
                     payload.getString("state"));
             assertEquals(1, payload.getJSONObject("questions").length());
             String instructions = payload.getJSONObject("questions")
@@ -152,7 +152,7 @@ public class SystemOneClientTest {
         });
         String rule = MessageCategories.compose(MessageCategories.ALL, "");
         AiDecision decision = client.decide("key", SystemOneClient.MODEL, rule,
-                "Early voting starts tomorrow. Make your voice heard!", "STOP", 0.95);
+                "Make a plan to vote this Tuesday! Every voice matters.", "STOP", 0.95);
         assertTrue(decision.shouldReply);
         assertEquals("STOP", decision.reply);
         assertEquals(1, requests[0]);
