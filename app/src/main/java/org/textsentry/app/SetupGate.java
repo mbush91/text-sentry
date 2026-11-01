@@ -19,8 +19,18 @@ final class SetupGate {
         if (hasAccess(activity)) return true;
         // Stops stale monitoring/replies if the last credential was removed.
         new Settings(activity).pause();
-        activity.startActivity(new Intent(activity, SetupActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+        Intent setup = new Intent(activity, SetupActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Intent incoming = activity.getIntent();
+        if (Intent.ACTION_SEND.equals(incoming.getAction())
+                && "text/plain".equals(incoming.getType())) {
+            CharSequence shared = incoming.getCharSequenceExtra(Intent.EXTRA_TEXT);
+            if (shared != null) {
+                setup.putExtra(Intent.EXTRA_TEXT,
+                        shared.subSequence(0, Math.min(1600, shared.length())).toString());
+            }
+        }
+        activity.startActivity(setup);
         activity.finish();
         return false;
     }
