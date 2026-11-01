@@ -30,7 +30,7 @@ public final class MainActivity extends Activity {
     }
 
     private void showHome() {
-        LinearLayout root = UiKit.screen(this, "Block the noise.", false);
+        LinearLayout root = UiKit.screen(this, "Less spam. More control.", false);
 
         LinearLayout overview = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, overview, "Inbox protection");

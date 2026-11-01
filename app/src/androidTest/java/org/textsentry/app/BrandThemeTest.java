@@ -40,6 +40,7 @@ public class BrandThemeTest {
         new Settings(context); // Apply legacy-migration before the synthetic key.
         KeyVault vault = new KeyVault(context);
         vault.save("synthetic-theme-test");
+        SetupFlow.complete(context);
         Intent intent = new Intent(context, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         Activity activity = InstrumentationRegistry.getInstrumentation().startActivitySync(intent);
@@ -81,6 +82,7 @@ public class BrandThemeTest {
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync(activity::finish);
             vault.clear();
+            SetupFlow.reset(context);
         }
     }
 }

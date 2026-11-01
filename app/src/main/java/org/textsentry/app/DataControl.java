@@ -14,6 +14,7 @@ public final class DataControl {
         new KeyVault(context).clear();
         // Account refresh/access/ID tokens are stored in a separate Keystore-backed vault.
         ManagedKeyMemory.clear();
+        SetupFlow.reset(context);
         new AuthSessionStore(context).clear();
         // Wipe the encrypted message archive and its Android Keystore key as well.
         try {

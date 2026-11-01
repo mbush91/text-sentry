@@ -108,25 +108,40 @@ public final class UiKit {
         }
         LinearLayout header = vertical(a);
         header.setBackgroundColor(NIGHT);
-        header.setPadding(dp(a, 24), dp(a, 28), dp(a, 24), dp(a, 31));
+        header.setPadding(dp(a, 22), dp(a, 14), dp(a, 22), dp(a, 18));
         body.addView(header);
+        LinearLayout brand = new LinearLayout(a);
+        brand.setOrientation(LinearLayout.HORIZONTAL);
+        brand.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(brand);
         if (back) {
-            Button backButton = new Button(a);
-            backButton.setText("←  Back");
-            backButton.setAllCaps(false);
-            backButton.setTextColor(ACCENT);
-            backButton.setBackgroundColor(Color.TRANSPARENT);
-            header.addView(backButton);
+            TextView backButton = text(a, "‹", 32, ACCENT, true);
+            backButton.setGravity(Gravity.CENTER_VERTICAL);
+            backButton.setContentDescription("Back");
+            LinearLayout.LayoutParams backParams =
+                    new LinearLayout.LayoutParams(dp(a, 40), dp(a, 46));
+            brand.addView(backButton, backParams);
             backButton.setOnClickListener(v -> a.finish());
         }
-        TextView title = text(a, "TextSentry", 31, Color.WHITE, true);
-        title.setLetterSpacing(-0.06f);
-        header.addView(title);
-        TextView sub = text(a, subtitle, 14, 0xFFD0DFFF, false);
-        sub.setPadding(0, dp(a, 8), 0, 0);
-        header.addView(sub);
+        android.widget.ImageView icon = new android.widget.ImageView(a);
+        icon.setImageResource(R.mipmap.ic_launcher);
+        icon.setContentDescription("TextSentry icon");
+        LinearLayout.LayoutParams logoParams =
+                new LinearLayout.LayoutParams(dp(a, 40), dp(a, 40));
+        logoParams.rightMargin = dp(a, 10);
+        brand.addView(icon, logoParams);
+        TextView wordmark = text(a, "TextSentry", 25, Color.WHITE, true);
+        wordmark.setLetterSpacing(-0.055f);
+        brand.addView(wordmark);
+        TextView dot = text(a, ".", 25, ACCENT, true);
+        brand.addView(dot);
+        if (subtitle != null && !subtitle.isEmpty()) {
+            TextView sub = text(a, subtitle, 13, 0xFFD0DFFF, false);
+            sub.setPadding(0, dp(a, 10), 0, 0);
+            header.addView(sub);
+        }
         LinearLayout content = vertical(a);
-        content.setPadding(dp(a, 18), dp(a, 22), dp(a, 18), dp(a, 30));
+        content.setPadding(dp(a, 20), dp(a, 26), dp(a, 20), dp(a, 28));
         body.addView(content);
         return content;
     }
@@ -196,6 +211,31 @@ public final class UiKit {
         parent.addView(b, lp);
         b.setOnClickListener(v -> action.run());
         return b;
+    }
+
+    /** Google-approved light treatment: standard four-color G, bordered white surface. */
+    public static LinearLayout googleSignInButton(Activity a, LinearLayout parent,
+                                                  Runnable action) {
+        LinearLayout surface = new LinearLayout(a);
+        surface.setOrientation(LinearLayout.HORIZONTAL);
+        surface.setGravity(Gravity.CENTER);
+        surface.setPadding(dp(a, 12), 0, dp(a, 12), 0);
+        surface.setBackground(shape(Color.WHITE, dp(a, 14), 0xFF747775));
+        surface.setClickable(true);
+        surface.setFocusable(true);
+        surface.setContentDescription("Sign in with Google");
+        android.widget.ImageView google = new android.widget.ImageView(a);
+        google.setImageResource(R.drawable.ic_google_g);
+        surface.addView(google, new LinearLayout.LayoutParams(dp(a, 24), dp(a, 24)));
+        TextView label = text(a, "Sign in with Google", 15, 0xFF1F1F1F, true);
+        LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(-2, -2);
+        labelParams.leftMargin = dp(a, 10);
+        surface.addView(label, labelParams);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(a, 56));
+        params.topMargin = dp(a, 20);
+        parent.addView(surface, params);
+        surface.setOnClickListener(v -> action.run());
+        return surface;
     }
 
     public static TextView chip(Activity a, LinearLayout parent, String value) {

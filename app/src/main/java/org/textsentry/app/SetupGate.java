@@ -14,11 +14,15 @@ final class SetupGate {
 
     static boolean needsSetup(Context context) { return !hasAccess(context); }
 
+    static boolean canEnterApp(Context context) {
+        return hasAccess(context) && SetupFlow.isComplete(context);
+    }
+
     /** Return false after routing away, before any protected UI is displayed. */
     static boolean enforce(Activity activity) {
-        if (hasAccess(activity)) return true;
+        if (canEnterApp(activity)) return true;
         // Stops stale monitoring/replies if the last credential was removed.
-        new Settings(activity).pause();
+        new Settings(activity).pause(); // Never keep existing monitoring active mid-wizard.
         Intent setup = new Intent(activity, SetupActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         Intent incoming = activity.getIntent();

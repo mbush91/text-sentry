@@ -15,6 +15,16 @@ Two distributions are maintained:
 - **Play flavor:** A manual assistant for pasted/shared text. It requires explicit per-analysis consent, never monitors incoming SMS, never sends SMS automatically and holds no restricted SMS permissions. The Play flavor is **not yet approved or published**.
 - **Sideload flavor:** An experimental tool to monitor eligible incoming SMS and optionally send STOP when local safeguards and the user-selected threshold pass. Monitoring and automatic replies remain **off by default**, with independent permission/consent checks and a one-tap pause.
 
+## Guided first-run setup
+
+Both editions begin with a branded Google sign-in or optional on-device TypeSafe BYOK. Until the wizard is completed, Home, Settings, History and developer tools are inaccessible (including on upgrades from earlier releases). The compact navy header uses the shared TextSentry shield and wordmark, with website-matched type, cyan accent, and the same "Stop sorting through spam" messaging.
+
+**Experimental sideload:** (1) sign in or BYOK, (2) open Android app battery settings and choose **Unrestricted** when available, (3) explicitly grant incoming SMS, with outgoing SMS optional, and (4) **Start monitoring**. The final action starts **preview-only**, never sends automatic replies. Unrestricted battery is recommended but not required; it does not grant SMS permissions. When the installer hard-restricts SMS access, Android can refuse the grant; the wizard offers app-info and troubleshooting, and users may finish without monitoring. No SMS text goes to TextSentry AWS.
+
+**Google Play:** (1) sign in or BYOK, (2) start manually reviewing shared/pasted texts. No SMS runtime permissions, background monitoring or auto-reply controls exist in Play flavor.
+
+Existing users need to complete the guide once after this release; credentials, message history, categories, confidence and existing BYOK settings remain intact. Resetting app data also resets onboarding.
+
 ## App experience
 
 Home keeps monitoring controls and sample analysis up front (sideload), or manual analysis and optional SMS compose (Play). Account, history, and settings are simple secondary actions; detailed rules and privacy controls remain available in Settings.

@@ -21,7 +21,8 @@ public final class SmsWorker extends Worker {
         Context context = getApplicationContext();
         Settings settings = new Settings(context);
         String queuedGeneration = getInputData().getString("generation");
-        if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) return Result.success();
+        if (!SetupGate.canEnterApp(context) || !settings.monitoring()
+                || !settings.generation().equals(queuedGeneration)) return Result.success();
         String sender = getInputData().getString("sender");
         String message = getInputData().getString("sms");
         if (!MessagePolicy.eligible(sender, message)) {

@@ -1,0 +1,45 @@
+package org.textsentry.app;
+
+import static org.junit.Assert.*;
+import android.content.Context;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+@RunWith(AndroidJUnit4.class)
+public class GuidedSetupTest {
+    private Context app() {
+        return InstrumentationRegistry.getInstrumentation().getTargetContext();
+    }
+
+    @Test public void existingByokUsersMustFinishWizardBeforeAccessingHome() throws Exception {
+        Context context = app();
+        SetupFlow.reset(context);
+        KeyVault keys = new KeyVault(context);
+        keys.save("synthetic-guided-setup-key");
+        assertTrue(SetupGate.hasAccess(context));
+        assertFalse(SetupFlow.isComplete(context));
+        assertFalse(SetupGate.canEnterApp(context));
+        SetupFlow.complete(context);
+        assertTrue(SetupGate.canEnterApp(context));
+        keys.clear();
+        SetupFlow.reset(context);
+    }
+
+    @Test public void stepsCannotBeAdvancedWithoutPreviousStage() {
+        assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.LOGIN, false));
+        assertEquals(SetupFlow.BATTERY, SetupFlow.validatedStage(SetupFlow.BATTERY, true));
+        assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.PERMISSIONS, false));
+        assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.ACTIVATE, false));
+    }
+
+    @Test public void deletionClearsCompletedSetup() throws Exception {
+        Context context = app();
+        new KeyVault(context).save("synthetic-reset-test");
+        SetupFlow.complete(context);
+        assertTrue(SetupFlow.isComplete(context));
+        DataControl.deleteLocalData(context);
+        assertFalse(SetupFlow.isComplete(context));
+    }
+}
