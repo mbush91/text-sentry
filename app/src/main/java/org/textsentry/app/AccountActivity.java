@@ -6,6 +6,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.LinearLayout;
+import android.widget.Button;
 import android.widget.TextView;
 import android.net.Uri;
 
@@ -31,6 +32,8 @@ public final class AccountActivity extends Activity {
     private AuthorizationService service;
     private AuthSessionStore sessions;
     private TextView status;
+    private TextView subscriptionStatus;
+    private Button subscribeButton;
     private int authGeneration;
 
     @Override public void onCreate(Bundle state) {
@@ -46,6 +49,80 @@ public final class AccountActivity extends Activity {
         }
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (sessions != null && sessions.hasSession()) refreshSubscription();
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // A billing return is a navigation signal, NEVER evidence of payment.
+        if (isBillingReturn(intent) && sessions != null && sessions.hasSession()) {
+            refreshSubscription();
+        }
+    }
+
+    static boolean isBillingReturn(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return false;
+        Uri uri = intent.getData();
+        return uri != null && "textsentry".equals(uri.getScheme())
+                && "billing".equals(uri.getHost()) && "/return".equals(uri.getPath());
+    }
+
+    /** Fetch the real RevenueCat entitlement from AWS, independent of the beta key bypass. */
+    private void refreshSubscription() {
+        if (!sessions.hasSession()) return;
+        final int generation = authGeneration;
+        final TextView label = subscriptionStatus;
+        if (label == null) return;
+        label.setText("Checking subscription…");
+        try {
+            AuthState auth = sessions.load();
+            if (auth == null || !auth.isAuthorized()) {
+                label.setText("Sign in again to check subscription.");
+                return;
+            }
+            auth.performActionWithFreshTokens(service, (accessToken, idToken, failure) -> {
+                if (generation != authGeneration || isFinishing() || isDestroyed()) return;
+                if (failure != null || accessToken == null) {
+                    label.setText("Subscription status unavailable");
+                    return;
+                }
+                new Thread(() -> {
+                    AccountStatusClient.Status found = null;
+                    try {
+                        found = AccountStatusClient.fetch(accessToken);
+                    } catch (Exception ignored) {
+                        // No bearer token, account identifier, SMS or HTTP body in errors.
+                    }
+                    final AccountStatusClient.Status verified = found;
+                    runOnUiThread(() -> {
+                        if (generation != authGeneration || isFinishing() || isDestroyed()
+                                || !sessions.hasSession() || subscriptionStatus != label) return;
+                        try {
+                            AuthState latest = sessions.load();
+                            if (latest == null || !latest.isAuthorized()) return;
+                        } catch (Exception ignored) { return; }
+                        boolean sandbox = BuildConfig.WEB_CHECKOUT_ENABLED
+                                && BuildConfig.WEB_CHECKOUT_URL.contains("/sandbox/");
+                        label.setText(verified == null
+                                ? "Subscription status unavailable"
+                                : verified.label(sandbox));
+                        if (subscribeButton != null) {
+                            boolean active = verified != null && verified.subscribed();
+                            subscribeButton.setEnabled(!active);
+                            subscribeButton.setText(active
+                                    ? "Subscription active" : "Subscribe to TextSentry");
+                        }
+                    });
+                }, "textsentry-subscription-status").start();
+            });
+        } catch (Exception ignored) {
+            label.setText("Subscription status unavailable");
+        }
+    }
+
     private void render() {
         boolean welcome = getIntent().getBooleanExtra("welcome", false);
         LinearLayout root = UiKit.screen(this,
@@ -56,6 +133,9 @@ public final class AccountActivity extends Activity {
                 welcome ? "One account. Less spam." : "Manage your Google sign-in.");
         status = UiKit.description(this, card, "");
         refreshStatus();
+        subscriptionStatus = UiKit.description(this, card,
+                sessions.hasSession() ? "Checking subscription…" : "");
+        subscribeButton = null;
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Switch Google account", false, this::startLogin);
         } else {
@@ -84,7 +164,7 @@ public final class AccountActivity extends Activity {
 
         if (sessions.hasSession()) {
             if (BuildConfig.WEB_CHECKOUT_ENABLED) {
-                UiKit.button(this, card, "Subscribe to TextSentry", true,
+                subscribeButton = UiKit.button(this, card, "Subscribe to TextSentry", true,
                         this::openCheckout);
                 UiKit.description(this, card,
                         "Checkout opens in your browser. Your own key remains a free option.");
@@ -202,6 +282,7 @@ public final class AccountActivity extends Activity {
                                     finish();
                                 } else {
                                     render();
+                                    refreshSubscription();
                                     fetchManagedKey();
                                 }
                             }
