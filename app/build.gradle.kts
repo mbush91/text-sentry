@@ -7,7 +7,13 @@ android {
         manifestPlaceholders["appAuthRedirectScheme"] = "textsentry"
         minSdk = 26
         targetSdk = 36
-        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
+        // GitHub workflow run numbers are independent; switching between sandbox,
+        // production-candidate and normal release must not downgrade an installed app.
+        // GITHUB_RUN_ID is repository-wide, monotonically increasing and currently
+        // safely fits in a 32-bit Android versionCode after dividing by 100.
+        versionCode = System.getenv("GITHUB_RUN_ID")?.toLongOrNull()
+            ?.div(100)?.takeIf { it in 1..2147483647L }?.toInt()
+            ?: (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
