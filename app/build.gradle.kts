@@ -4,6 +4,7 @@ android {
     compileSdk = 36
     defaultConfig {
         applicationId = "org.textsentry.app"
+        manifestPlaceholders["appAuthRedirectScheme"] = "textsentry"
         minSdk = 26
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
