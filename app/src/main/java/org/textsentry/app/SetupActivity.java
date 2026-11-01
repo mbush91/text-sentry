@@ -213,6 +213,12 @@ public final class SetupActivity extends Activity {
         UiKit.chip(this, card, SetupPermissions.hasIncoming(this)
                 ? "✓ Incoming SMS ready" : "○ Incoming SMS permission needed");
 
+        if (BuildConfig.WEB_CHECKOUT_ENABLED
+                && new AuthSessionStore(this).hasSession()) {
+            UiKit.button(this, card, "Subscription options", false,
+                    () -> startActivity(new Intent(this, AccountActivity.class)));
+        }
+
         if (SetupPermissions.hasIncoming(this)) {
             UiKit.button(this, card, "Start monitoring", true, () -> {
                 if (!SetupGate.hasAccess(this) || !SetupPermissions.hasIncoming(this)) {

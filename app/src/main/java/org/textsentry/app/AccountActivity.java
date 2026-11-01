@@ -83,6 +83,12 @@ public final class AccountActivity extends Activity {
         }
 
         if (sessions.hasSession()) {
+            if (BuildConfig.WEB_CHECKOUT_ENABLED) {
+                UiKit.button(this, card, "Subscribe to TextSentry", true,
+                        this::openCheckout);
+                UiKit.description(this, card,
+                        "Checkout opens in your browser. Your own key remains a free option.");
+            }
             UiKit.button(this, card, "Refresh key", false, this::fetchManagedKey);
         }
         UiKit.description(this, root, "Your key stays in memory. No SMS goes to AWS.");
@@ -205,6 +211,73 @@ public final class AccountActivity extends Activity {
                                 "The account could not be saved securely. Sign-in was not completed."));
                     }
                 });
+    }
+
+    /** Open hosted checkout only after verifying the account's Cognito sub with AWS.
+     * Never put Cognito tokens or SMS messages in checkout URLs.
+     */
+    private void openCheckout() {
+        if (!BuildConfig.WEB_CHECKOUT_ENABLED || !sessions.hasSession()) return;
+        final int generation = authGeneration;
+        status.setText("Preparing secure checkout…");
+        try {
+            AuthState state = sessions.load();
+            if (state == null || !state.isAuthorized()
+                    || state.getRefreshToken() == null) {
+                status.setText("Sign in again before subscribing.");
+                return;
+            }
+            final String refreshToken = state.getRefreshToken();
+            state.performActionWithFreshTokens(service, (accessToken, idToken, failure) -> {
+                if (generation != authGeneration || isFinishing() || isDestroyed()) return;
+                if (failure != null || accessToken == null) {
+                    status.setText("Sign in again before subscribing.");
+                    return;
+                }
+                try {
+                    sessions.save(state);
+                } catch (Exception e) {
+                    status.setText("Could not save your session securely.");
+                    return;
+                }
+                new Thread(() -> {
+                    String url = null;
+                    try {
+                        url = WebCheckout.purchaseUrl(WebCheckout.fetchUserId(accessToken),
+                                BuildConfig.WEB_CHECKOUT_URL);
+                    } catch (Exception ignored) {
+                        // Do not include tokens, account identifiers or HTTP responses in UI errors.
+                    }
+                    final String target = url;
+                    runOnUiThread(() -> {
+                        if (generation != authGeneration || isFinishing() || isDestroyed()) return;
+                        try {
+                            AuthState latest = sessions.load();
+                            if (latest == null || !refreshToken.equals(latest.getRefreshToken())) {
+                                status.setText("Account changed. Sign in again.");
+                                return;
+                            }
+                        } catch (Exception e) {
+                            status.setText("Could not verify your session.");
+                            return;
+                        }
+                        if (target == null) {
+                            status.setText("Checkout unavailable. Please try again.");
+                            return;
+                        }
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(target))
+                                    .addCategory(Intent.CATEGORY_BROWSABLE));
+                            status.setText("Checkout opened in your browser. Return here after paying.");
+                        } catch (ActivityNotFoundException e) {
+                            status.setText("Install a browser to complete checkout.");
+                        }
+                    });
+                }, "textsentry-checkout").start();
+            });
+        } catch (Exception e) {
+            status.setText("Could not prepare checkout. Sign in again.");
+        }
     }
 
     /** Refresh Cognito access tokens when necessary, then fetch into RAM only. */
