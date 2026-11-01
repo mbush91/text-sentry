@@ -8,7 +8,7 @@
 
 ## What TextSentry does
 
-TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not have a TextSentry account, proprietary backend, analytics SDK, advertising tracker, or remote storage service.
+TextSentry provides optional Google sign-in through AWS Cognito while current AI analysis remains bring-your-own-key (BYOK). TextSentry maintains a limited AWS account and key-management backend, but **does not send any SMS contents to that backend**. Managed-key subscription analysis is not yet integrated into Android. There are no analytics or advertising SDKs.
 
 **Google Play edition:** You decide what text to paste or explicitly share with the app. The Play edition does not read incoming messages automatically, cannot send messages automatically, does not request SMS/call-log permissions, and cannot inspect your SMS inbox. You may review and edit an AI suggestion, then manually open your existing SMS app to compose a reply. The SMS app, not TextSentry, sends it after your approval.
 
@@ -16,6 +16,7 @@ TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not ha
 
 ## Information handled
 
+- If you opt into Google sign-in/sign-up, Google and AWS Cognito process basic identity information (such as email address and Cognito user ID) and issue access, ID and refresh tokens. The system browser handles your Google password; TextSentry never sees it. The tokens are encrypted with a dedicated Android Keystore AES-GCM key and saved in app-private storage to keep your session between app launches. TextSentry AWS may retain account identity and future subscription metadata, but never SMS message bodies.
 - Your TypeSafe API key, confidence threshold and instructions are stored locally on your device. The API key is encrypted using Android Keystore. The local message-history archive uses a separate Android Keystore-backed AES-256-GCM encryption key. The provider and model are not configurable.
 - The text you explicitly submit in the Play edition, or eligible SMS body and sender in the sideload edition when monitoring is on, is transmitted **to TypeSafe AI (Jev System One)** to obtain an evaluation. The provider and model are fixed in this version. The generic chat interface uses a placeholder sender number for manually submitted Play text.
 - The AI provider may process, store or retain submitted content in accordance with **its own privacy policy and terms**. Check those terms before sending private or sensitive text. Do not submit one-time codes, passwords or other sensitive content.
@@ -27,11 +28,13 @@ A hidden developer mode can be enabled by seven taps on the **AI connection** he
 
 ## Your choices and consent
 
+Google sign-in is optional and provides a first-time sign-up or returning-user login without creating a TextSentry password. Signing in does not activate automatic SMS monitoring or replies, or activate a subscription. Signing out erases saved tokens from the app, not Google's existing browser cookies or the remote Cognito account; contact project support for account deletion inquiries.
+
 In the Play edition, no message is submitted to AI without checking the consent box and selecting **Analyze**. That choice is reset after an analysis. In the sideload edition, you must separately enable SMS monitoring and automatic sending. You can pause sideload monitoring or delete local TextSentry data in either edition.
 
 ## Retention and deletion
 
-TextSentry does not operate a cloud account. The History page keeps up to 100 encrypted results and offers a **Clear history** control; use **Clear local decision history** to remove TextSentry's encrypted history and short outcome log, **Delete all local TextSentry data** to remove all local app records, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. These controls do **not** delete SMS messages from the device's default messaging app; inbox deletion requires default SMS handler capabilities that TextSentry does not currently provide. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
+TextSentry supports optional Google/Cognito accounts; sign-out and local data erasure do not delete the remote account or Google/AWS sign-in records. The History page keeps up to 100 encrypted results and offers a **Clear history** control; use **Clear local decision history** to remove TextSentry's encrypted history and short outcome log, **Delete all local TextSentry data** to remove all local app records, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, encrypted account tokens, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. These controls do **not** delete SMS messages from the device's default messaging app; inbox deletion requires default SMS handler capabilities that TextSentry does not currently provide. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
 
 ## Sharing, security and children
 
