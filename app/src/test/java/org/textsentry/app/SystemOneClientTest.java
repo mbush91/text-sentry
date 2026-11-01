@@ -30,7 +30,7 @@ public class SystemOneClientTest {
         assertEquals("https://openrouter.ai/api/alpha/decisions", observed[0]);
         assertEquals("managed-test-key", observed[1]);
         JSONObject payload = new JSONObject(observed[2]);
-        assertEquals("~typesafe/jev-latest", payload.getString("model"));
+        assertEquals("typesafe/jev-1.14", payload.getString("model"));
         assertEquals(MESSAGE, payload.getString("state"));
         assertEquals(1, payload.getJSONObject("questions").length());
         assertEquals("noul", payload.getJSONObject("questions").getJSONObject("reply").getString("type"));
