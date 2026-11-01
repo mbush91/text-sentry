@@ -117,6 +117,20 @@ RevenueCat Billing sandbox monthly subscriptions renew around every **five minut
 
 `subscription_status: unavailable` means verification failed, not an inactive purchase. A separate user-facing status or link alone must never grant access. When diagnosing, avoid a new sandbox purchase until checking the current RevenueCat customer's expiration timestamp and entitlement. The AWS CloudFormation Git-sync deployment must contain the matching diagnostic API changes, and the RevenueCat V1 project secret must be correct. Keep `EnforceSubscriptions: 'false'` while testing.
 
+## Production checkout rollout (staged)
+
+The private **production checkout candidate** workflow builds a **signed sideload APK** with `TEXTSENTRY_ENABLE_WEB_CHECKOUT=true` and the provided production Purchase Link `https://pay.rev.cat/mimrlvpobvqnjikw/`. It never publishes a GitHub Release, cannot be triggered on a PR or non-main branch, and uploads a seven-day `TextSentry-PRODUCTION-checkout-CANDIDATE-NOT-PUBLIC` artifact. It is intentionally **real-payment capable**; do not distribute it broadly or complete a real purchase until the live Stripe/RevenueCat configuration and charge are explicitly accepted. The current sandbox workflow remains separate and never creates production purchases.
+
+The existing signed prerelease workflow is unchanged by default. Its production checkout CTA is gated by GitHub Actions repository **variable** `TEXTSENTRY_PRODUCTION_CHECKOUT_ENABLED` (must be exactly `true`); otherwise checkout remains hidden. Never use the sandbox URL in a normal public release. The Play edition always has `WEB_CHECKOUT_ENABLED=false` and must not contain the sideload billing intent or restricted SMS permissions.
+
+**Before enabling release variable:**
+1. In RevenueCat, confirm the production Purchase Link uses a live Stripe account, the desired live price for `textsentry_monthly` and associated `textsentry` entitlement, the `textsentry://billing/return` success redirect, and working billing receipts and customer portal management. RevenueCat Billing's customer portal appears in purchase/renewal emails.
+2. Install the private signed production candidate. Sign in with a controlled Cognito account; the checkout App User ID is the verified Cognito `sub`. Only complete a real purchase with explicit authorization for the charge. Confirm `GET /v1/me` reports `subscription_status=active`, `subscription_sandbox=false` and that the product grants `textsentry`. An active sandbox purchase alone does not count as paid.
+3. Test cancellation through the RevenueCat Customer Portal: entitlement remains active until the paid-through date and expires afterward. Test expiry/refund separately using an appropriately controlled RevenueCat account; do not shorten a real customer's paid access. Confirm the AWS key is not reissued and EventBridge reconciliation eventually disables remotely issued keys.
+4. Verify the updated AWS CloudFormation inline Lambda has actually deployed. Keep `EnforceSubscriptions: 'false'` in production until this real-purchase and cancellation/expiry verification succeeds; then deliberately change it and the Android release variable in a coordinated rollout. BYOK users are not subject to the managed-key entitlement.
+
+Android APK version codes now use the repository-wide GitHub Actions run ID (scaled to fit Android), rather than the independent workflow run numbers. This prevents switching from sandbox to production candidate from being rejected as a version downgrade. Signing keys and `org.textsentry.app` stay the same, so candidates install as in-place updates, not parallel apps.
+
 ## Signing and release
 
 Configure GitHub Actions repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD` to enable optional signed release publishing on main. Until configured, the signed-release job skips publication while debug APK artifacts still work. Protect main with required quality and emulator checks; merely defining workflows is not branch protection.
