@@ -53,7 +53,7 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 ## Official native UI and fixed provider
 
 - The app always uses TypeSafe AI Jev: direct BYOK endpoint/model `https://api.typesafe.ai/v1/systemone` / `jev-latest`, or managed `https://openrouter.ai/api/alpha/decisions` / `~typesafe/jev-latest`. Do not allow user override; keep one typed question, selected categories and fail-closed behavior. Any old chat-provider key must be invalidated on upgrade.
-- Both Android flavors have a clean home/dashboard and a separate settings activity. Use consistent native colors, readable cards and accessible labels, aligned with TextSentry.org.
+- Both flavors launch the non-bypassable SetupActivity first when no Google session or encrypted BYOK credential exists. Every protected activity enforces SetupGate on entry and resume; after sign-out, key deletion, or local data erase, navigation returns to setup. Both Android flavors have a clean home/dashboard and a separate settings activity. Use consistent native colors, readable cards and accessible labels, aligned with TextSentry.org.
 - Settings manage user BYOK credentials in Android Keystore, instructions and 50–100% yes-probability threshold (default 95%). Worker/preview/Play review all use the configured threshold.
 - The model never generates a reply or selects a recipient; qualifying messages only suggest/auto-send fixed STOP.
 - Local decision history can be cleared on-device. Do not claim or attempt deletion of carrier inbox SMS without a genuine default SMS handler implementation and policy clearance.
