@@ -6,8 +6,8 @@ import org.json.JSONObject;
 
 /** Offline provider contract: no network, no API keys and no carrier SMS sends. */
 public class SystemOneClientTest {
-    private static final String PROMPT = "Only opt-in advertisements with an explicit STOP unsubscribe";
-    private static final String MESSAGE = "Save 20% today. Reply STOP to unsubscribe.";
+    private static final String PROMPT = "Unsolicited ads and promotions regardless of unsubscribe wording";
+    private static final String MESSAGE = "Weekend sale: save 20 percent on your next order!";
 
     private static String result(Object probability) throws Exception {
         return new JSONObject().put("model", "jev-latest")
@@ -134,6 +134,28 @@ public class SystemOneClientTest {
         assertTrue(client.decide("key", SystemOneClient.MODEL, rule,
                 MESSAGE, "STOP", 0.95).shouldReply);
         assertEquals(1, calls[0]);
+    }
+
+    @Test public void canApproveCampaignMessageWithoutAnUnsubscribeLineInOneCall() throws Exception {
+        final int[] requests = {0};
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            requests[0]++;
+            JSONObject payload = new JSONObject(body);
+            assertEquals("Early voting starts tomorrow. Make your voice heard!",
+                    payload.getString("state"));
+            assertEquals(1, payload.getJSONObject("questions").length());
+            String instructions = payload.getJSONObject("questions")
+                    .getJSONObject("reply").getString("instructions");
+            assertTrue(instructions.contains("nonpartisan get-out-the-vote"));
+            assertTrue(instructions.contains("do not require an opt-out keyword"));
+            return result(0.99);
+        });
+        String rule = MessageCategories.compose(MessageCategories.ALL, "");
+        AiDecision decision = client.decide("key", SystemOneClient.MODEL, rule,
+                "Early voting starts tomorrow. Make your voice heard!", "STOP", 0.95);
+        assertTrue(decision.shouldReply);
+        assertEquals("STOP", decision.reply);
+        assertEquals(1, requests[0]);
     }
 
     @Test public void missingCredentialsDoNotCallProvider() throws Exception {
