@@ -142,15 +142,14 @@ public final class AccountActivity extends Activity {
                 welcome ? "One account. Less spam." : "Manage your Google sign-in.");
         status = UiKit.description(this, card, "");
         refreshStatus();
-        subscriptionStatus = UiKit.description(this, card,
-                sessions.hasSession() ? "Checking subscription…" : "");
-        revenueCatAccountId = UiKit.description(this, card, "");
-        revenueCatAccountId.setTextIsSelectable(true);
+        subscriptionStatus = null;
+        revenueCatAccountId = null;
         subscribeButton = null;
         if (sessions.hasSession() && "sideload".equals(BuildConfig.FLAVOR)) {
             // Always explain the subscription path, even in a checkout-disabled
             // public prerelease. Don't silently omit it and confuse users.
             UiKit.heading(this, card, "Subscription");
+            subscriptionStatus = UiKit.description(this, card, "Checking subscription…");
             if (BuildConfig.WEB_CHECKOUT_ENABLED) {
                 subscribeButton = UiKit.button(this, card, "Subscribe to TextSentry",
                         true, this::openCheckout);
@@ -167,6 +166,8 @@ public final class AccountActivity extends Activity {
             }
             UiKit.button(this, card, "Refresh subscription", false,
                     this::refreshSubscription);
+            revenueCatAccountId = UiKit.description(this, card, "");
+            revenueCatAccountId.setTextIsSelectable(true);
         }
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Switch Google account", false, this::startLogin);
