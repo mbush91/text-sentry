@@ -37,7 +37,7 @@ public final class HistoryActivity extends Activity {
             if ("sent".equals(entry.status) || "submitting".equals(entry.status)) replied++;
             if ("preview".equals(entry.status) || "manual_suggestion".equals(entry.status)) preview++;
         }
-        LinearLayout summary = UiKit.card(this, root, 0xFFE4F3D8);
+        LinearLayout summary = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, summary, "Your activity");
         UiKit.description(this, summary,
                 entries.size() + " evaluated · " + replied + " sent/submitted · " + preview + " previews");
