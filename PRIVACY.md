@@ -1,6 +1,6 @@
 # TextSentry Privacy Policy
 
-**Last updated:** October 31, 2026
+**Last updated:** November 1, 2026
 
 **App:** TextSentry (`org.textsentry.app`). This policy applies to both the Google Play edition and the separately distributed sideload edition.
 
@@ -8,7 +8,7 @@
 
 ## What TextSentry does
 
-TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not have a TextSentry account, proprietary backend, analytics SDK, advertising tracker, or remote storage service.
+TextSentry is a message-assistance app with optional Google sign-in through AWS Cognito. Its current message analysis remains bring-your-own-key (BYOK); the managed-key subscription service is being developed and is **not yet integrated into Android message processing**. TextSentry operates a limited AWS account/key-management backend, but **does not send SMS messages or their contents to that backend**. It has no advertising or analytics SDK.
 
 **Google Play edition:** You decide what text to paste or explicitly share with the app. The Play edition does not read incoming messages automatically, cannot send messages automatically, does not request SMS/call-log permissions, and cannot inspect your SMS inbox. You may review and edit an AI suggestion, then manually open your existing SMS app to compose a reply. The SMS app, not TextSentry, sends it after your approval.
 
@@ -16,6 +16,7 @@ TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not ha
 
 ## Information handled
 
+- If you choose Google sign-in/sign-up, Google and AWS Cognito receive the OAuth authentication information needed to identify your account (including email and Cognito user ID). The app requests only basic Google identity scopes (`openid`, `email`, `profile`) and receives access, ID and refresh tokens from Cognito. These tokens are encrypted with a separate Android Keystore-backed AES-GCM key in app-private storage so the account can remain signed in between launches. The OAuth browser handles your password; the app does not read it. Sign-out erases the local tokens, not the remotely created Cognito account. The TextSentry backend stores account identity and may associate future subscription/key metadata; it never receives SMS content.
 - Your TypeSafe API key, confidence threshold and instructions are stored locally on your device. The API key is encrypted using Android Keystore. The local message-history archive uses a separate Android Keystore-backed AES-256-GCM encryption key. The provider and model are not configurable.
 - The text you explicitly submit in the Play edition, or eligible SMS body and sender in the sideload edition when monitoring is on, is transmitted **to TypeSafe AI (Jev System One)** to obtain an evaluation. The provider and model are fixed in this version. The generic chat interface uses a placeholder sender number for manually submitted Play text.
 - The AI provider may process, store or retain submitted content in accordance with **its own privacy policy and terms**. Check those terms before sending private or sensitive text. Do not submit one-time codes, passwords or other sensitive content.
@@ -23,11 +24,13 @@ TextSentry is a bring-your-own-key (BYOK) message-assistance app. It does not ha
 
 ## Your choices and consent
 
+Creating an account or signing in with Google is optional. The first-time and returning-user login experiences both use Google OAuth; no TextSentry password account is offered. Account sign-in does not enable SMS monitoring or authorize paid key issuance. When you sign out, the local OAuth session is removed; browser/Google session cookies may remain in the system browser. Google and AWS may retain sign-in records under their own policies. For account deletion inquiries, use the support contact above; the in-app local deletion control is not a remote account-deletion request.
+
 In the Play edition, no message is submitted to AI without checking the consent box and selecting **Analyze**. That choice is reset after an analysis. In the sideload edition, you must separately enable SMS monitoring and automatic sending. You can pause sideload monitoring or delete local TextSentry data in either edition.
 
 ## Retention and deletion
 
-TextSentry does not operate a cloud account. The History page keeps up to 100 encrypted results and offers a **Clear history** control; use **Clear local decision history** to remove TextSentry's encrypted history and short outcome log, **Delete all local TextSentry data** to remove all local app records, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. These controls do **not** delete SMS messages from the device's default messaging app; inbox deletion requires default SMS handler capabilities that TextSentry does not currently provide. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
+TextSentry now supports optional cloud-backed Google/Cognito accounts. Account identity and login processing may be retained by Google and AWS. Signing out or clearing local app data does not delete a Cognito account or erase external provider records. The History page keeps up to 100 encrypted results and offers a **Clear history** control; use **Clear local decision history** to remove TextSentry's encrypted history and short outcome log, **Delete all local TextSentry data** to remove all local app records, or Android Settings > Apps > TextSentry > Storage > Clear storage, to erase the locally stored configuration, API key, encrypted account tokens, decision history and deduplication records. TextSentry also cancels scheduled work when local data is deleted. These controls do **not** delete SMS messages from the device's default messaging app; inbox deletion requires default SMS handler capabilities that TextSentry does not currently provide. Deleting local data **cannot delete information already transmitted** to your independent AI provider; contact that provider for its deletion procedure.
 
 ## Sharing, security and children
 
