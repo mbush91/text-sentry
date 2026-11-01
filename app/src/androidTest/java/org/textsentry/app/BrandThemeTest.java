@@ -33,7 +33,7 @@ public class BrandThemeTest {
         assertEquals(context.getColor(R.color.textsentry_cyan), UiKit.ACCENT);
     }
 
-    @Test public void launchWindowAndScrolledScreensUseReadableSystemBars() {
+    @Test public void launchWindowAndScrolledScreensUseReadableSystemBars() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         // MainActivity is protected; use a synthetic encrypted BYOK key to test
         // its visual system bars without bypassing the onboarding gate.
