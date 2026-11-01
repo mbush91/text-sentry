@@ -13,6 +13,7 @@ public final class DataControl {
         WorkManager.getInstance(context).cancelAllWork();
         new KeyVault(context).clear();
         // Account refresh/access/ID tokens are stored in a separate Keystore-backed vault.
+        ManagedKeyMemory.clear();
         new AuthSessionStore(context).clear();
         // Wipe the encrypted message archive and its Android Keystore key as well.
         try {
