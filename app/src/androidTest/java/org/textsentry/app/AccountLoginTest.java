@@ -47,6 +47,16 @@ public class AccountLoginTest {
         assertNotNull(context.getPackageManager().resolveActivity(redirect, 0));
     }
 
+    @Test public void managedKeyIsProcessMemoryOnlyAndCanBeCleared() {
+        ManagedKeyMemory.clear();
+        assertFalse(ManagedKeyMemory.hasActiveKey());
+        ManagedKeyMemory.install("synthetic-ram-key", System.currentTimeMillis() + 60000);
+        assertTrue(ManagedKeyMemory.hasActiveKey());
+        assertEquals("synthetic-ram-key", ManagedKeyMemory.currentKey());
+        ManagedKeyMemory.clear();
+        assertNull(ManagedKeyMemory.currentKey());
+    }
+
     @Test public void accountStoreRejectsIncompleteTokensAndCanClear() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         AuthSessionStore store = new AuthSessionStore(context);
