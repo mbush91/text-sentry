@@ -10,7 +10,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Four short steps: account, battery, SMS permissions, opt-in start. */
+/** Guided setup: sign-in, optional subscription, SMS permissions, battery, start. */
 public final class SetupActivity extends Activity {
     private static final int INCOMING_SMS_REQUEST = 301;
     private static final int OUTGOING_SMS_REQUEST = 302;
