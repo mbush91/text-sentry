@@ -37,11 +37,8 @@ public final class SmsWorker extends Worker {
                 return Result.success();
             }
 
-            AiDecision decision = settings.systemOne()
-                    ? new SystemOneClient().decide(key, settings.model(), settings.prompt(),
-                            message, settings.cannedReply())
-                    : new DecisionClient().decide(settings.endpoint(), settings.model(),
-                            key, settings.prompt(), sender, message);
+            AiDecision decision = new SystemOneClient().decide(key, SystemOneClient.MODEL,
+                    settings.prompt(), message, "STOP", settings.confidence() / 100.0);
             if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
                 return Result.success();
             }
