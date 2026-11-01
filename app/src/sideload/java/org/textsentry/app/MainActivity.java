@@ -60,7 +60,10 @@ public final class MainActivity extends Activity {
 
         LinearLayout rule = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, rule, "Your rules");
-        UiKit.description(this, rule, settings.prompt());
+        UiKit.description(this, rule, "Selected: " +
+                MessageCategories.summary(settings.categoryMask()));
+        UiKit.description(this, rule, "Additional restrictions: " +
+                (settings.prompt().isEmpty() ? "None" : settings.prompt()));
         UiKit.chip(this, rule, "Approval threshold  " + settings.confidence() + "%");
         UiKit.button(this, rule, "Open settings  →", false, () ->
                 startActivity(new Intent(this, SettingsActivity.class)));
@@ -81,7 +84,17 @@ public final class MainActivity extends Activity {
                 result.setText("Add your TypeSafe API key in Settings first.");
                 return;
             }
-            final String ruleText = settings.prompt();
+            final String ruleText;
+            try {
+                ruleText = settings.effectivePrompt();
+            } catch (IllegalArgumentException invalid) {
+                result.setText("Settings rules are too long.");
+                return;
+            }
+            if (ruleText.isEmpty()) {
+                result.setText("Select at least one category in Settings.");
+                return;
+            }
             final int threshold = settings.confidence();
             result.setText("Evaluating · this test will not send an SMS…");
             new Thread(() -> {

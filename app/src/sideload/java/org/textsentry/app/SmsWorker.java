@@ -26,6 +26,11 @@ public final class SmsWorker extends Worker {
             return Result.success();
         }
         try {
+            String combinedInstructions = settings.effectivePrompt();
+            if (combinedInstructions.isEmpty()) {
+                settings.addHistory("Ignored (no categories selected)");
+                return Result.success();
+            }
             String key = new KeyVault(context).read();
             if (key.isEmpty()) {
                 settings.addHistory("Skipped (API key missing)");
@@ -38,7 +43,7 @@ public final class SmsWorker extends Worker {
             }
 
             AiDecision decision = new SystemOneClient().decide(key, SystemOneClient.MODEL,
-                    settings.prompt(), message, "STOP", settings.confidence() / 100.0);
+                    combinedInstructions, message, "STOP", settings.confidence() / 100.0);
             if (!settings.monitoring() || !settings.generation().equals(queuedGeneration)) {
                 return Result.success();
             }

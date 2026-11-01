@@ -117,6 +117,25 @@ public class SystemOneClientTest {
         } catch (IllegalArgumentException expected) {}
     }
 
+    @Test public void multipleCategoriesCauseExactlyOneHttpPostAndOneReplyQuestion() throws Exception {
+        final int[] calls = {0};
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            calls[0]++;
+            JSONObject payload = new JSONObject(body);
+            assertEquals(1, payload.getJSONObject("questions").length());
+            String instructions = payload.getJSONObject("questions").getJSONObject("reply")
+                    .getString("instructions");
+            assertTrue(instructions.contains("nonpartisan get-out-the-vote"));
+            assertTrue(instructions.contains("candidate or political party campaigns"));
+            assertTrue(instructions.contains("marketing advertisements"));
+            return result(0.98);
+        });
+        String rule = MessageCategories.compose(MessageCategories.ALL, "");
+        assertTrue(client.decide("key", SystemOneClient.MODEL, rule,
+                MESSAGE, "STOP", 0.95).shouldReply);
+        assertEquals(1, calls[0]);
+    }
+
     @Test public void missingCredentialsDoNotCallProvider() throws Exception {
         SystemOneClient client = new SystemOneClient((url, key, json) -> {
             fail("A missing key must not result in a network request");

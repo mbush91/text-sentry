@@ -11,7 +11,9 @@ import java.util.UUID;
 public final class Settings {
     public static final String DEFAULT_ENDPOINT = SystemOneClient.ENDPOINT;
     public static final String DEFAULT_MODEL = SystemOneClient.MODEL;
-    public static final String DEFAULT_PROMPT =
+    /** Optional restrictions, combined after selected categories. */
+    public static final String DEFAULT_PROMPT = "";
+    private static final String LEGACY_DEFAULT_PROMPT =
             "Only reply STOP to unmistakably opt-in marketing messages that explicitly " +
             "describe a STOP unsubscribe option. Ignore personal messages, scams, " +
             "transactional notices, and uncertainty.";
@@ -33,7 +35,19 @@ public final class Settings {
     public String endpoint() { return DEFAULT_ENDPOINT; }
     public String model() { return DEFAULT_MODEL; }
     public boolean systemOne() { return true; }
-    public String prompt() { return prefs.getString("prompt", DEFAULT_PROMPT); }
+    public String prompt() {
+        String value = prefs.getString("prompt", DEFAULT_PROMPT);
+        // The former default was marketing-only; leave category choices free to expand.
+        return LEGACY_DEFAULT_PROMPT.equals(value) ? DEFAULT_PROMPT : value;
+    }
+    public int categoryMask() {
+        int stored = prefs.getInt("category_mask", MessageCategories.DEFAULT_MASK);
+        return MessageCategories.valid(stored) ? stored : 0;
+    }
+    /** Exactly one set of instructions per eligible incoming text. */
+    public String effectivePrompt() {
+        return MessageCategories.compose(categoryMask(), prompt());
+    }
     public String cannedReply() { return prefs.getString("canned_reply", "STOP"); }
     public int confidence() {
         return Math.max(50, Math.min(100,
@@ -45,23 +59,31 @@ public final class Settings {
     public String history() { return prefs.getString("history", "No decisions yet."); }
 
     /** A policy change invalidates work that was queued using older rules. */
-    public void savePolicy(String prompt, int confidence, String fixedReply) {
-        if (prompt == null || prompt.trim().isEmpty() || prompt.length() > 3000) {
-            throw new IllegalArgumentException("Rules must be 1–3000 characters");
+    public void saveCategoryPolicy(String extraPrompt, int confidence, int categories) {
+        if (extraPrompt == null || extraPrompt.length() > 2000) {
+            throw new IllegalArgumentException("Additional rules must be at most 2000 characters");
         }
         if (confidence < 50 || confidence > 100) {
             throw new IllegalArgumentException("Confidence must be 50–100%");
         }
+        // Validate the complete request, including all checked categories, before committing.
+        MessageCategories.compose(categories, extraPrompt);
+        if (!prefs.edit().putString("prompt", extraPrompt.trim())
+                .putInt("confidence_percent", confidence)
+                .putInt("category_mask", categories)
+                .putString("canned_reply", "STOP")
+                .putBoolean("system_one", true)
+                .putString("generation", UUID.randomUUID().toString()).commit()) {
+            throw new IllegalStateException("Could not save category rules");
+        }
+    }
+
+    /** Compatibility for old saves; preserves category selection. */
+    public void savePolicy(String prompt, int confidence, String fixedReply) {
         if (!SystemOneClient.validReply(fixedReply)) {
             throw new IllegalArgumentException("Invalid fixed reply");
         }
-        if (!prefs.edit().putString("prompt", prompt.trim())
-                .putInt("confidence_percent", confidence)
-                .putString("canned_reply", fixedReply.trim())
-                .putBoolean("system_one", true)
-                .putString("generation", UUID.randomUUID().toString()).commit()) {
-            throw new IllegalStateException("Could not save policy");
-        }
+        saveCategoryPolicy(prompt, confidence, categoryMask());
     }
 
     /** Remains distinct from policy saves so toggling monitoring cannot change the AI model. */

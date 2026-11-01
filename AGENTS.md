@@ -57,3 +57,11 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 - Settings manage user BYOK credentials in Android Keystore, instructions and 50–100% yes-probability threshold (default 95%). Worker/preview/Play review all use the configured threshold.
 - The model never generates a reply or selects a recipient; qualifying messages only suggest/auto-send fixed STOP.
 - Local decision history can be cleared on-device. Do not claim or attempt deletion of carrier inbox SMS without a genuine default SMS handler implementation and policy clearance.
+
+## Message category rules
+
+- Keep all opt-out category selections as ONE OR-combined Jev instruction with a single `questions.reply` yes/no classification per eligible, deduplicated SMS. Do not make one TypeSafe request per category.
+- Default selections: marketing on, get-out-the-vote and political campaign off. If every category is unchecked, skip provider calls and do not reply.
+- Only authorize the prewritten STOP when the message offers an explicit SMS STOP unsubscribe option; never send campaign persuasion or interfere with official voting/registration notices.
+- User-entered extra instructions may further restrict the choices, but must not expand unselected categories or disable safety checks.
+- Both flavors, worker, preview and Play review must use `settings.effectivePrompt()`. Saving categories invalidates queued work generations. Tests assert persistence and single-call semantics.
