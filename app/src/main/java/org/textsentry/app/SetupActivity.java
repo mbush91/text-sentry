@@ -7,7 +7,6 @@ import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -106,16 +105,6 @@ public final class SetupActivity extends Activity {
     private void renderLogin() {
         LinearLayout root = stage("01 / SIGN IN",
                 "Stop sorting through spam.", "Less spam. More control.", 1);
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(R.mipmap.ic_launcher);
-        logo.setContentDescription("TextSentry logo");
-        LinearLayout.LayoutParams logoParams =
-                new LinearLayout.LayoutParams(UiKit.dp(this, 84), UiKit.dp(this, 84));
-        logoParams.gravity = Gravity.CENTER_HORIZONTAL;
-        logoParams.topMargin = UiKit.dp(this, 8);
-        logoParams.bottomMargin = UiKit.dp(this, 16);
-        root.addView(logo, logoParams);
-
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.googleSignInButton(this, card, () -> {
             Intent intent = new Intent(this, AccountActivity.class);
