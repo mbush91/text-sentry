@@ -3,15 +3,26 @@ package org.textsentry.app;
 import android.app.Activity;
 import android.os.Bundle;
 
-/** Permission-minimized Play home; any SMS compose action is user-initiated. */
+/** Play edition only analyzes text when users request it. */
 public final class MainActivity extends Activity {
+    private String lastSettingsGeneration;
+
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        refresh();
     }
 
     @Override protected void onResume() {
         super.onResume();
-        // Refresh key readiness and confidence when returning from Settings.
-        PlayUi.show(this, new Settings(this), new KeyVault(this));
+        // Keep the user's in-progress draft when returning from their SMS app.
+        Settings settings = new Settings(this);
+        if (lastSettingsGeneration != null &&
+                !lastSettingsGeneration.equals(settings.generation())) refresh();
+    }
+
+    private void refresh() {
+        Settings settings = new Settings(this);
+        lastSettingsGeneration = settings.generation();
+        PlayUi.show(this, settings, new KeyVault(this));
     }
 }
