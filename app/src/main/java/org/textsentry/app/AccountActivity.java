@@ -117,7 +117,7 @@ public final class AccountActivity extends Activity {
                             // to compare with the RevenueCat customer dashboard.
                             accountId.setText("RevenueCat customer ID: " + verified.userId);
                         }
-                        if (subscribeButton != null) {
+                        if (subscribeButton != null && BuildConfig.WEB_CHECKOUT_ENABLED) {
                             boolean active = verified != null
                                     && verified.subscriptionValidForBuild(sandbox);
                             subscribeButton.setEnabled(!active);
@@ -147,6 +147,27 @@ public final class AccountActivity extends Activity {
         revenueCatAccountId = UiKit.description(this, card, "");
         revenueCatAccountId.setTextIsSelectable(true);
         subscribeButton = null;
+        if (sessions.hasSession() && "sideload".equals(BuildConfig.FLAVOR)) {
+            // Always explain the subscription path, even in a checkout-disabled
+            // public prerelease. Don't silently omit it and confuse users.
+            UiKit.heading(this, card, "Subscription");
+            if (BuildConfig.WEB_CHECKOUT_ENABLED) {
+                subscribeButton = UiKit.button(this, card, "Subscribe to TextSentry",
+                        true, this::openCheckout);
+                UiKit.description(this, card,
+                        "Secure browser checkout. Your subscription is verified by TextSentry.");
+            } else {
+                subscribeButton = UiKit.button(this, card,
+                        "Subscription checkout unavailable in this build", false,
+                        () -> { });
+                subscribeButton.setEnabled(false);
+                UiKit.description(this, card,
+                        "Install the subscription-enabled sideload APK to subscribe. "
+                                + "Your account and local history are not removed.");
+            }
+            UiKit.button(this, card, "Refresh subscription", false,
+                    this::refreshSubscription);
+        }
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Switch Google account", false, this::startLogin);
         } else {
@@ -174,14 +195,6 @@ public final class AccountActivity extends Activity {
         }
 
         if (sessions.hasSession()) {
-            if (BuildConfig.WEB_CHECKOUT_ENABLED) {
-                subscribeButton = UiKit.button(this, card, "Subscribe to TextSentry", true,
-                        this::openCheckout);
-                UiKit.description(this, card,
-                        "Checkout opens in your browser. Your own key remains a free option.");
-            }
-            UiKit.button(this, card, "Refresh subscription", false,
-                    this::refreshSubscription);
             UiKit.button(this, card, "Refresh key", false, this::fetchManagedKey);
         }
         UiKit.description(this, root, "Your key stays in memory. No SMS goes to AWS.");
