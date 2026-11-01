@@ -17,7 +17,7 @@ Two distributions are maintained:
 
 ## App experience
 
-The redesigned home screen shows TypeSafe connection readiness, monitoring status (sideload), selected message categories, active confidence setting and test/decision history.
+Home keeps monitoring controls and sample analysis up front (sideload), or manual analysis and optional SMS compose (Play). Account, history, and settings are simple secondary actions; detailed rules and privacy controls remain available in Settings.
 
 ### Message categories
 
