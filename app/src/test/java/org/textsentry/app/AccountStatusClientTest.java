@@ -49,6 +49,34 @@ public class AccountStatusClientTest {
         assertEquals("Purchase is missing the textsentry entitlement", missing.label(true));
     }
 
+    @Test public void productionNeverTreatsSandboxAsPaid() {
+        AccountStatusClient.Status sandbox = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":true}");
+        assertTrue(sandbox.subscribed());
+        assertFalse(sandbox.subscriptionValidForBuild(false));
+        assertTrue(sandbox.subscriptionValidForBuild(true));
+        assertEquals("Sandbox subscription only — live subscription required",
+                sandbox.label(false));
+        assertEquals("TextSentry subscription active (sandbox)", sandbox.label(true));
+    }
+
+    @Test public void livePurchaseWorksForEitherSideloadBuild() {
+        AccountStatusClient.Status live = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":false}");
+        assertTrue(live.subscriptionValidForBuild(false));
+        assertTrue(live.subscriptionValidForBuild(true));
+        assertEquals("TextSentry subscription active", live.label(false));
+    }
+
+    @Test public void unknownPurchaseEnvironmentIsNotVerifiedForProduction() {
+        AccountStatusClient.Status legacy = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\"}");
+        assertFalse(legacy.subscriptionValidForBuild(false));
+        assertEquals("Subscription environment unavailable", legacy.label(false));
+    }
+
     @Test public void unsupportedResponseIsRejected() {
         for (String data : new String[] {"{}", "not json",
                 "{\"subscription_status\":\"active\"}",
