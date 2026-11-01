@@ -8,8 +8,8 @@
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="512" android:viewportHeight="512">
-    <group android:scaleX="0.69" android:scaleY="0.69"
-        android:translateX="79.36" android:translateY="79.36">
+    <group android:scaleX="0.63" android:scaleY="0.63"
+        android:translateX="94.72" android:translateY="94.72">
         <!-- Cyan-to-purple protective shield. -->
         <path
             android:pathData="M256,62 C202,93 148,109 91,120 Q74,123 74,145 V254 C74,343 136,411 256,468 C376,411 438,343 438,254 V145 Q438,123 421,120 C364,109 310,93 256,62 Z"
