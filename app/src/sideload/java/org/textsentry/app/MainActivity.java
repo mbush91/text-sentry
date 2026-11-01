@@ -20,6 +20,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state);
         settings = new Settings(this);
         vault = new KeyVault(this);
+        Onboarding.offer(this);
     }
 
     @Override protected void onResume() {
@@ -31,8 +32,8 @@ public final class MainActivity extends Activity {
         LinearLayout root = UiKit.screen(this, "Less noise. More signal.", false);
         LinearLayout status = UiKit.card(this, root, UiKit.HIGHLIGHT);
         UiKit.heading(this, status, "Your inbox, in your hands");
-        UiKit.description(this, status, "TypeSafe AI · Jev latest");
-        UiKit.chip(this, status, vault.hasKey() ? "● API key ready" : "○ Setup needed");
+        UiKit.description(this, status, "Jev AI · your rules, your inbox");
+        UiKit.chip(this, status, AnalysisAccess.status(this));
         String state = settings.monitoring() && !hasReceivePermission()
                 ? "Monitoring blocked: SMS permission missing"
                 : !settings.monitoring() ? "Monitoring paused"
@@ -124,8 +125,8 @@ public final class MainActivity extends Activity {
                 result.setText("Blocked by local safety rules.");
                 return;
             }
-            if (!vault.hasKey()) {
-                result.setText("Add your TypeSafe API key in Settings first.");
+            if (!AnalysisAccess.hasProvider(this)) {
+                result.setText("Sign in with Google or bring your own key to analyze.");
                 return;
             }
             final String ruleText;
@@ -144,15 +145,14 @@ public final class MainActivity extends Activity {
             new Thread(() -> {
                 String answer;
                 try {
-                    SystemOneClient.Evaluation evaluation = new SystemOneClient().evaluate(
-                            vault.read(), SystemOneClient.MODEL, ruleText,
-                            content, "STOP", threshold / 100.0,
+                    SystemOneClient.Evaluation evaluation = AnalysisAccess.evaluate(this,
+                            ruleText, content, threshold / 100.0,
                             DeveloperMode.traceSink(this, "sample"));
                     answer = (evaluation.decision.shouldReply ? "Suggested reply: STOP" :
                             "No reply suggested.") + " Jev match: " +
                             Math.round(evaluation.confidence * 100) + "%.";
                 } catch (Exception ex) {
-                    answer = "Unable to evaluate. Check your API key or connection.";
+                    answer = "Unable to analyze. Check your account/key or connection.";
                 }
                 String text = answer;
                 runOnUiThread(() -> result.setText(text));
@@ -191,9 +191,9 @@ public final class MainActivity extends Activity {
     }
 
     private void startPreview() {
-        if (!vault.hasKey()) {
-            Toast.makeText(this, "Add a TypeSafe key in Settings first", Toast.LENGTH_LONG).show();
-            startActivity(new Intent(this, SettingsActivity.class));
+        if (!AnalysisAccess.hasProvider(this)) {
+            Toast.makeText(this, "Sign in or add your own key first", Toast.LENGTH_LONG).show();
+            startActivity(new Intent(this, AccountActivity.class));
             return;
         }
         if (!hasReceivePermission()) {
@@ -228,7 +228,7 @@ public final class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         boolean granted = grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
-        if (requestCode == 100 && granted && vault.hasKey()) {
+        if (requestCode == 100 && granted && AnalysisAccess.hasProvider(this)) {
             settings.setAutomation(true, false);
         } else if (requestCode == 101 && granted && settings.monitoring()
                 && hasReceivePermission()) {
