@@ -29,7 +29,9 @@ public class GuidedSetupTest {
 
     @Test public void stepsCannotBeAdvancedWithoutPreviousStage() {
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.LOGIN, false));
+        assertEquals(SetupFlow.PERMISSIONS, SetupFlow.validatedStage(SetupFlow.PERMISSIONS, true));
         assertEquals(SetupFlow.BATTERY, SetupFlow.validatedStage(SetupFlow.BATTERY, true));
+        assertTrue("permissions precede battery", SetupFlow.PERMISSIONS < SetupFlow.BATTERY);
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.PERMISSIONS, false));
         assertEquals(SetupFlow.LOGIN, SetupFlow.validatedStage(SetupFlow.ACTIVATE, false));
     }
