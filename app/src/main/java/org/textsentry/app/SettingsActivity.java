@@ -56,8 +56,8 @@ public final class SettingsActivity extends Activity {
         LinearLayout rules = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, rules, "Message categories");
         UiKit.description(this, rules,
-                "Select which kinds of messages should qualify for a STOP opt-out. " +
-                "A message only needs to match one checked category.");
+                "Choose which types of unsolicited texts Jev should consider for a STOP reply. " +
+                "A message only needs to match one selected category.");
         voteCategory = addCategory(rules, "Go vote reminders",
                 "Unsolicited nonpartisan reminders to vote.", MessageCategories.VOTE);
         politicalCategory = addCategory(rules, "Political campaign messages",
@@ -65,8 +65,8 @@ public final class SettingsActivity extends Activity {
         marketingCategory = addCategory(rules, "Marketing ads",
                 "Retail promotions, sales, coupons and advertising.", MessageCategories.MARKETING);
         UiKit.description(this, rules,
-                "Only messages with an explicit STOP unsubscribe option qualify. " +
-                "Official voting information, security codes and personal texts are excluded.");
+                "A message does not need to mention STOP or provide an unsubscribe option. " +
+                "Official voting information, security codes and personal texts remain excluded.");
 
         UiKit.heading(this, rules, "Additional instructions");
         prompt = UiKit.input(this, rules, "Optional extra restrictions",

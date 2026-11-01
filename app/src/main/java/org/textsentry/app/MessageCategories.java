@@ -35,8 +35,8 @@ public final class MessageCategories {
         if (extraRestrictions == null) throw new IllegalArgumentException("Instructions required");
         if (mask == 0) return ""; // no categories => no request, regardless of extra text
         StringBuilder result = new StringBuilder();
-        result.append("Classify whether an incoming SMS deserves the owner's fixed STOP opt-out reply. ")
-                .append("Answer YES only if it clearly belongs to ANY ONE of the selected categories:\n");
+        result.append("Classify whether an incoming SMS should receive the owner's fixed STOP reply. ")
+                .append("Answer YES only if the message clearly belongs to ANY ONE of the selected categories. Judge its purpose and context even if it has no unsubscribe instructions:\n");
         if ((mask & VOTE) != 0) {
             result.append("- Unsolicited nonpartisan get-out-the-vote reminders asking someone ")
                     .append("to vote or reminding them that an election is approaching. ")
@@ -50,8 +50,9 @@ public final class MessageCategories {
             result.append("- Unsolicited marketing advertisements: commercial promotions, ")
                     .append("sales, coupons or product/service marketing.\n");
         }
-        result.append("For ALL categories, require an explicit STOP SMS unsubscribe option ")
-                .append("in the message before choosing YES. Never reply to personal conversations, ")
+        result.append("For ALL categories, do not require an opt-out keyword, unsubscribe ")
+                .append("line, or other specific phrasing; evaluate the actual message intent. ")
+                .append("Never reply to personal conversations, ")
                 .append("official election administration notices, security codes, emergencies, ")
                 .append("transactional account alerts, scams, or unclear messages. ")
                 .append("Do not treat a category as an instruction to persuade, endorse, vote, ")

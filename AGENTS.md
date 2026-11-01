@@ -62,6 +62,6 @@ Scope discipline: prefer focused changes; document ambiguous choices, choose the
 
 - Keep all opt-out category selections as ONE OR-combined Jev instruction with a single `questions.reply` yes/no classification per eligible, deduplicated SMS. Do not make one TypeSafe request per category.
 - Default selections: all three categories on; preserve saved user choices, including explicit unchecks. If every category is unchecked, skip provider calls and do not reply.
-- Only authorize the prewritten STOP when the message offers an explicit SMS STOP unsubscribe option; never send campaign persuasion or interfere with official voting/registration notices.
+- The classifier does NOT require the incoming message to contain STOP or an unsubscribe option. Judge selected message categories by purpose and context at the configured threshold. Never send campaign persuasion or interfere with official voting/registration notices.
 - User-entered extra instructions may further restrict the choices, but must not expand unselected categories or disable safety checks.
 - Both flavors, worker, preview and Play review must use `settings.effectivePrompt()`. Saving categories invalidates queued work generations. Tests assert persistence and single-call semantics.

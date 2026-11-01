@@ -21,8 +21,22 @@ public class MessageCategoriesTest {
         assertTrue(instructions.contains("marketing advertisements"));
         assertTrue(instructions.contains("ANY ONE"));
         assertTrue(instructions.contains("Ignore messages from my dentist."));
-        assertTrue(instructions.contains("explicit STOP"));
+        assertTrue(instructions.contains("do not require an opt-out keyword"));
+        assertTrue(instructions.contains("even if it has no unsubscribe instructions"));
+        assertFalse(instructions.contains("require an explicit STOP"));
         assertTrue(instructions.contains("never override"));
+    }
+
+    @Test public void promotionalOrPoliticalTextsDoNotNeedAnOptOutPhrase() {
+        for (int category : new int[] {
+                MessageCategories.VOTE,
+                MessageCategories.POLITICAL,
+                MessageCategories.MARKETING
+        }) {
+            String instructions = MessageCategories.compose(category, "");
+            assertTrue(instructions.contains("do not require an opt-out keyword"));
+            assertFalse(instructions.contains("require an explicit STOP"));
+        }
     }
 
     @Test public void noSelectionsMeansNoProviderQuery() {
