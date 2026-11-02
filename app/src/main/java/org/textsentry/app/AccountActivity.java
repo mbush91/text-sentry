@@ -45,7 +45,8 @@ public final class AccountActivity extends Activity {
         super.onCreate(state);
         service = new AuthorizationService(this);
         sessions = new AuthSessionStore(this);
-        continueSetup = getIntent().getBooleanExtra("continue_setup", false);
+        continueSetup = getIntent().getBooleanExtra("continue_setup", false)
+                || SetupFlow.subscriptionHandoffPending(this);
         render();
         if (getIntent().getBooleanExtra("auto_login", false)
                 && state == null && !sessions.hasSession()) {
