@@ -7,12 +7,12 @@ public class WebCheckoutTest {
     @Test public void authenticatedAccountManagementUrlRequiresHttps() {
         String portal = "https://billing.revenuecat.com/customer/session";
         assertEquals(portal, WebCheckout.managementUrlFromAccount(
-                "{\\"subscription_management_url\\":\\"" + portal + "\\"}"));
+                "{\"subscription_management_url\":\"" + portal + "\"}"));
         for (String candidate : new String[] {
                 "javascript:alert(1)", "http://billing.revenuecat.com/path",
                 "https://bad@billing.revenuecat.com/path", ""}) {
             assertNull(WebCheckout.managementUrlFromAccount(
-                    "{\\"subscription_management_url\\":\\"" + candidate + "\\"}"));
+                    "{\"subscription_management_url\":\"" + candidate + "\"}"));
         }
         assertNull(WebCheckout.managementUrlFromAccount("{}"));
     }
