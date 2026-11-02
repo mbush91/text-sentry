@@ -17,8 +17,8 @@ final class SubscriptionOnboarding {
     }
 
     static boolean shouldRetrieveKey(boolean setupContinuation, boolean alreadyFetching,
-                                     AccountStatusClient.Status account, boolean sandboxBuild) {
+                                     AccountStatusClient.Status account) {
         return setupContinuation && !alreadyFetching && account != null
-                && account.managedAccess && account.subscriptionValidForBuild(sandboxBuild);
+                && account.managedAccess && account.subscriptionValidForBuild(false);
     }
 }
