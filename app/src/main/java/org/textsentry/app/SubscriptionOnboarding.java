@@ -5,6 +5,7 @@ final class SubscriptionOnboarding {
     private SubscriptionOnboarding() { }
 
     static android.content.Intent continueSetupIntent(android.content.Context context) {
+        SetupFlow.beginSubscriptionHandoff(context);
         return new android.content.Intent(context, AccountActivity.class)
                 .putExtra("continue_setup", true);
     }
