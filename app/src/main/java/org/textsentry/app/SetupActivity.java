@@ -167,10 +167,11 @@ public final class SetupActivity extends Activity {
         LinearLayout card = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, card, "TextSentry access");
         UiKit.description(this, card,
-                "Review your subscription status before enabling monitoring.");
+                "Active subscription? We'll set up your key and continue automatically.");
         if (BuildConfig.WEB_CHECKOUT_ENABLED) {
-            UiKit.button(this, card, "Review plans and subscribe", true,
-                    () -> startActivity(new Intent(this, AccountActivity.class)));
+            UiKit.button(this, card, "Check subscription and continue", true, () -> {
+                startActivity(SubscriptionOnboarding.continueSetupIntent(this));
+            });
             UiKit.description(this, card,
                     "Secure checkout opens in your browser. Payments may be real or test "
                             + "depending on the build.");
@@ -187,7 +188,7 @@ public final class SetupActivity extends Activity {
             display();
         });
         UiKit.description(this, root,
-                "You can continue without purchasing during the current beta.");
+                "You can set up permissions now, but managed AI analysis needs an active subscription and key.");
     }
 
     private void renderPermissions() {

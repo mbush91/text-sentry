@@ -117,6 +117,12 @@ RevenueCat Billing sandbox monthly subscriptions renew around every **five minut
 
 `subscription_status: unavailable` means verification failed, not an inactive purchase. A separate user-facing status or link alone must never grant access. When diagnosing, avoid a new sandbox purchase until checking the current RevenueCat customer's expiration timestamp and entitlement. The AWS CloudFormation Git-sync deployment must contain the matching diagnostic API changes, and the RevenueCat V1 project secret must be correct. Do not use sandbox receipts as proof of production access.
 
+## Active subscription handoff and monthly-key limit
+
+During first-run Google setup, **Check subscription and continue** opens the signed-in account screen. When authenticated `GET /v1/me` confirms an active **live** RevenueCat entitlement and `managed_access: true`, TextSentry automatically calls authenticated `GET /v1/key` to retrieve the existing current-month key (or provision that month's first key), installs it **only in RAM**, completes the optional billing prompt, and returns to the SMS-permissions step. A purchase redirect, sandbox purchase, or a stale/beta-only status cannot trigger this handoff. An unavailable key leaves the account screen open with a retry action; it never falsely reports protection as active.
+
+**HTTP 429 is not necessarily a spend-limit error.** The backend specifically returns `key_revoked_until_next_month` if an already-issued current-month managed key was later revoked. Because the backend deleted that key's plaintext and must never create a second $1/month key, the app cannot recover it with a login or another purchase. It now explains the condition, and the user may explicitly continue to configure SMS permissions **without a working managed key**, or bring their own key. Real AI analysis still needs a valid credential. A generic 429 means temporary throttling instead. Production support must investigate the revocation cause, without bypassing the budget cap.
+
 ## Guided sideload setup and restricted permissions
 
 Sideload first-run wizard now follows **Google sign-in → subscription options → SMS permissions → battery access → start monitoring**. The Google account route presents a dedicated subscription step before permissions; the BYOK route skips subscription. The Play-safe manual edition does not show sideload web billing.

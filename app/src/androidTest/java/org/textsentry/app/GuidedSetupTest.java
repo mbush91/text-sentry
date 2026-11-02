@@ -68,6 +68,35 @@ public class GuidedSetupTest {
         SetupFlow.reset(context);
     }
 
+    @Test public void paidOnboardingIntentReturnsToRequiredSetup() {
+        android.content.Intent intent = SubscriptionOnboarding.continueSetupIntent(app());
+        assertTrue(intent.getBooleanExtra("continue_setup", false));
+        assertEquals(AccountActivity.class.getName(), intent.getComponent().getClassName());
+        assertTrue(SetupFlow.subscriptionHandoffPending(app()));
+        // Simulate a fresh Activity after a web checkout redirect.
+        assertTrue(SetupFlow.subscriptionHandoffPending(app()));
+        SetupFlow.completeSubscriptionPrompt(app());
+        assertFalse(SetupFlow.subscriptionHandoffPending(app()));
+        SetupFlow.reset(app());
+    }
+
+    @Test public void onboardingOnlyAdvancesAfterManagedKeyInstalledInMemory() {
+        Context context = app();
+        SetupFlow.reset(context);
+        ManagedKeyMemory.clear();
+        assertFalse(SubscriptionOnboarding.completeAfterVerifiedKey(context));
+        assertFalse(SetupFlow.subscriptionPromptSeen(context));
+        try {
+            ManagedKeyMemory.install("synthetic-test-key",
+                    System.currentTimeMillis() + 60000);
+            assertTrue(SubscriptionOnboarding.completeAfterVerifiedKey(context));
+            assertTrue(SetupFlow.subscriptionPromptSeen(context));
+        } finally {
+            ManagedKeyMemory.clear();
+            SetupFlow.reset(context);
+        }
+    }
+
     @Test public void deletionClearsCompletedSetup() throws Exception {
         Context context = app();
         new KeyVault(context).save("synthetic-reset-test");

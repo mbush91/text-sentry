@@ -35,17 +35,24 @@ public final class AccountActivity extends Activity {
     private TextView subscriptionStatus;
     private TextView revenueCatAccountId;
     private Button subscribeButton;
+    private Button continueWithoutKeyButton;
+    private boolean continueSetup;
+    private boolean onboardingKeyFetchStarted;
+    private boolean keyRequestInFlight;
     private int authGeneration;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         service = new AuthorizationService(this);
         sessions = new AuthSessionStore(this);
+        continueSetup = getIntent().getBooleanExtra("continue_setup", false)
+                || SetupFlow.subscriptionHandoffPending(this);
         render();
         if (getIntent().getBooleanExtra("auto_login", false)
                 && state == null && !sessions.hasSession()) {
             startLogin();
-        } else if (sessions.hasSession() && !getIntent().getBooleanExtra("welcome", false)) {
+        } else if (sessions.hasSession() && !getIntent().getBooleanExtra("welcome", false)
+                && !continueSetup) {
             fetchManagedKey();
         }
     }
@@ -117,12 +124,29 @@ public final class AccountActivity extends Activity {
                             // to compare with the RevenueCat customer dashboard.
                             accountId.setText("RevenueCat customer ID: " + verified.userId);
                         }
+                        boolean paid = verified != null
+                                && verified.subscriptionValidForBuild(sandbox);
+                        boolean keyEligible = verified != null && verified.managedAccess
+                                && verified.subscriptionValidForBuild(false);
                         if (subscribeButton != null && BuildConfig.WEB_CHECKOUT_ENABLED) {
-                            boolean active = verified != null
-                                    && verified.subscriptionValidForBuild(sandbox);
-                            subscribeButton.setEnabled(!active);
-                            subscribeButton.setText(active
-                                    ? "Subscription active" : "Subscribe to TextSentry");
+                            if (keyEligible) {
+                                subscribeButton.setEnabled(true);
+                                subscribeButton.setText(continueSetup
+                                        ? "Continue setup" : "Refresh managed key");
+                                subscribeButton.setOnClickListener(v -> fetchManagedKey());
+                            } else if (paid) {
+                                subscribeButton.setEnabled(false);
+                                subscribeButton.setText("Subscription active · key unavailable");
+                            } else {
+                                subscribeButton.setEnabled(true);
+                                subscribeButton.setText("Subscribe to TextSentry");
+                                subscribeButton.setOnClickListener(v -> openCheckout());
+                            }
+                        }
+                        if (SubscriptionOnboarding.shouldRetrieveKey(continueSetup,
+                                onboardingKeyFetchStarted, verified)) {
+                            onboardingKeyFetchStarted = true;
+                            fetchManagedKey();
                         }
                     });
                 }, "textsentry-subscription-status").start();
@@ -145,6 +169,7 @@ public final class AccountActivity extends Activity {
         subscriptionStatus = null;
         revenueCatAccountId = null;
         subscribeButton = null;
+        continueWithoutKeyButton = null;
         if (sessions.hasSession() && "sideload".equals(BuildConfig.FLAVOR)) {
             // Always explain the subscription path, even in a checkout-disabled
             // public prerelease. Don't silently omit it and confuse users.
@@ -168,6 +193,15 @@ public final class AccountActivity extends Activity {
                     this::refreshSubscription);
             revenueCatAccountId = UiKit.description(this, card, "");
             revenueCatAccountId.setTextIsSelectable(true);
+            if (continueSetup) {
+                continueWithoutKeyButton = UiKit.button(this, card,
+                        "Continue to SMS permissions without a key", false, () -> {
+                            new Settings(this).pause();
+                            SetupFlow.completeSubscriptionPrompt(this);
+                            finish();
+                        });
+                continueWithoutKeyButton.setVisibility(android.view.View.GONE);
+            }
         }
         if (sessions.hasSession()) {
             UiKit.button(this, card, "Switch Google account", false, this::startLogin);
@@ -390,16 +424,23 @@ public final class AccountActivity extends Activity {
 
     /** Refresh Cognito access tokens when necessary, then fetch into RAM only. */
     private void fetchManagedKey() {
+        if (keyRequestInFlight) return;
         if (!sessions.hasSession()) {
             ManagedKeyMemory.clear();
             status.setText("Sign in with Google to get your managed key.");
             return;
         }
         final int generation = authGeneration;
+        keyRequestInFlight = true;
+        if (continueWithoutKeyButton != null) {
+            continueWithoutKeyButton.setVisibility(android.view.View.GONE);
+        }
         status.setText("Checking your managed key…");
         try {
             AuthState state = sessions.load();
             if (state == null || !state.isAuthorized()) {
+                keyRequestInFlight = false;
+                onboardingKeyFetchStarted = false;
                 ManagedKeyMemory.clear();
                 status.setText("Sign in again to refresh your account.");
                 return;
@@ -407,6 +448,8 @@ public final class AccountActivity extends Activity {
             state.performActionWithFreshTokens(service, (accessToken, idToken, failure) -> {
                 if (generation != authGeneration || isFinishing() || isDestroyed()) return;
                 if (failure != null || accessToken == null) {
+                    keyRequestInFlight = false;
+                    onboardingKeyFetchStarted = false;
                     ManagedKeyMemory.clear();
                     status.setText("Account session expired. Sign in again.");
                     return;
@@ -415,6 +458,8 @@ public final class AccountActivity extends Activity {
                     // Persist only OAuth session tokens, never the OpenRouter key.
                     sessions.save(state);
                 } catch (Exception e) {
+                    keyRequestInFlight = false;
+                    onboardingKeyFetchStarted = false;
                     ManagedKeyMemory.clear();
                     status.setText("Unable to secure refreshed account tokens.");
                     return;
@@ -433,20 +478,41 @@ public final class AccountActivity extends Activity {
                     runOnUiThread(() -> {
                         if (generation != authGeneration || isFinishing() || isDestroyed()
                                 || !sessions.hasSession()) return;
+                        keyRequestInFlight = false;
                         if (fetched == null) {
+                            onboardingKeyFetchStarted = false;
                             ManagedKeyMemory.clear();
                             status.setText(problem == null
                                     ? "Could not retrieve managed key."
                                     : problem);
+                            if (continueSetup && continueWithoutKeyButton != null
+                                    && problem != null && problem.contains("revoked")) {
+                                status.append(" You can set permissions now, but "
+                                        + "AI analysis needs a managed key.");
+                                continueWithoutKeyButton.setVisibility(android.view.View.VISIBLE);
+                            }
                         } else {
                             ManagedKeyMemory.install(fetched.key, fetched.expiresAtMillis);
                             status.setText(fetched.status());
-                            if (getIntent().getBooleanExtra("welcome", false)) finish();
+                            if (continueSetup) {
+                                // Returning to SetupActivity advances to SMS permissions.
+                                // Only mark the prompt complete AFTER the key is in RAM.
+                                if (SubscriptionOnboarding.completeAfterVerifiedKey(this)) {
+                                    finish();
+                                } else {
+                                    onboardingKeyFetchStarted = false;
+                                    status.setText("Could not install the managed key. Retry.");
+                                }
+                            } else if (getIntent().getBooleanExtra("welcome", false)) {
+                                finish();
+                            }
                         }
                     });
                 }, "textsentry-managed-key").start();
             });
         } catch (Exception e) {
+            keyRequestInFlight = false;
+            onboardingKeyFetchStarted = false;
             ManagedKeyMemory.clear();
             status.setText("Unable to read account session. Sign in again.");
         }

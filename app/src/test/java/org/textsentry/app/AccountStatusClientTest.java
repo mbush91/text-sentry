@@ -77,6 +77,26 @@ public class AccountStatusClientTest {
         assertEquals("Subscription environment unavailable", legacy.label(false));
     }
 
+    @Test public void onboardingFetchesKeyOnlyForServerAuthorizedLiveSubscription() {
+        AccountStatusClient.Status live = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":false,\"managed_access\":true}");
+        assertTrue(SubscriptionOnboarding.shouldRetrieveKey(true, false, live));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, true, live));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(false, false, live));
+
+        AccountStatusClient.Status sandbox = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"active\","
+                + "\"subscription_sandbox\":true,\"managed_access\":true}");
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, sandbox));
+
+        AccountStatusClient.Status betaOnly = AccountStatusClient.parse(
+                "{\"user_id\":\"id\",\"subscription_status\":\"inactive\","
+                + "\"managed_access\":true}");
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, betaOnly));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, null));
+    }
+
     @Test public void unsupportedResponseIsRejected() {
         for (String data : new String[] {"{}", "not json",
                 "{\"subscription_status\":\"active\"}",

@@ -15,6 +15,7 @@ final class SetupFlow {
     private static final int CURRENT_VERSION = 2;
     private static final String DONE = "completed";
     private static final String SUBSCRIPTION_PROMPT_SEEN = "subscription_prompt_seen";
+    private static final String SUBSCRIPTION_HANDOFF_PENDING = "subscription_handoff_pending";
 
     private SetupFlow() {}
 
@@ -87,9 +88,20 @@ final class SetupFlow {
                 "sideload".equals(BuildConfig.FLAVOR), subscriptionPromptSeen(context));
     }
 
+    static void beginSubscriptionHandoff(Context context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(SUBSCRIPTION_HANDOFF_PENDING, true).commit();
+    }
+
+    static boolean subscriptionHandoffPending(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean(SUBSCRIPTION_HANDOFF_PENDING, false);
+    }
+
     static void completeSubscriptionPrompt(Context context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-                .putBoolean(SUBSCRIPTION_PROMPT_SEEN, true).commit();
+                .putBoolean(SUBSCRIPTION_PROMPT_SEEN, true)
+                .remove(SUBSCRIPTION_HANDOFF_PENDING).commit();
     }
 
     static void reset(Context context) {
