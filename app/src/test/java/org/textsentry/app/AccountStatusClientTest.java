@@ -81,9 +81,9 @@ public class AccountStatusClientTest {
         AccountStatusClient.Status live = AccountStatusClient.parse(
                 "{\"user_id\":\"id\",\"subscription_status\":\"active\","
                 + "\"subscription_sandbox\":false,\"managed_access\":true}");
-        assertTrue(SubscriptionOnboarding.shouldRetrieveKey(true, false, live, false));
-        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, true, live, false));
-        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(false, false, live, false));
+        assertTrue(SubscriptionOnboarding.shouldRetrieveKey(true, false, live));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, true, live));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(false, false, live));
 
         AccountStatusClient.Status sandbox = AccountStatusClient.parse(
                 "{\"user_id\":\"id\",\"subscription_status\":\"active\","
