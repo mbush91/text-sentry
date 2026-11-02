@@ -7,7 +7,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.view.View;
+import net.openid.appauth.AuthState;
+import net.openid.appauth.AuthorizationService;
+import android.content.ActivityNotFoundException;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -171,12 +173,68 @@ public final class SettingsActivity extends Activity {
     }
 
     private void manageSubscription() {
+        AuthSessionStore sessions = new AuthSessionStore(this);
+        if (!sessions.hasSession()) {
+            startActivity(new Intent(this, AccountActivity.class));
+            return;
+        }
+        AuthorizationService service = new AuthorizationService(this);
+        try {
+            AuthState state = sessions.load();
+            if (state == null || !state.isAuthorized()) {
+                showPortalHelp();
+                service.dispose();
+                return;
+            }
+            state.performActionWithFreshTokens(service, (accessToken, idToken, error) -> {
+                if (error != null || accessToken == null) {
+                    runOnUiThread(this::showPortalHelp);
+                    service.dispose();
+                    return;
+                }
+                try {
+                    sessions.save(state);
+                } catch (Exception ignored) {
+                    runOnUiThread(this::showPortalHelp);
+                    service.dispose();
+                    return;
+                }
+                new Thread(() -> {
+                    String destination = null;
+                    try {
+                        destination = WebCheckout.managementUrlFromAccount(
+                                WebCheckout.fetchAccount(accessToken));
+                    } catch (Exception ignored) {
+                        // Never display tokens or provider responses.
+                    }
+                    final String target = destination;
+                    runOnUiThread(() -> {
+                        service.dispose();
+                        if (isFinishing() || isDestroyed()) return;
+                        if (target == null) {
+                            showPortalHelp();
+                            return;
+                        }
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(target))
+                                    .addCategory(Intent.CATEGORY_BROWSABLE));
+                        } catch (ActivityNotFoundException ignored) {
+                            showPortalHelp();
+                        }
+                    });
+                }, "textsentry-subscription-portal").start();
+            });
+        } catch (Exception ignored) {
+            service.dispose();
+            showPortalHelp();
+        }
+    }
+
+    private void showPortalHelp() {
         new AlertDialog.Builder(this)
                 .setTitle("Manage subscription")
-                .setMessage("To cancel or change your RevenueCat web subscription, open the customer portal link in your RevenueCat purchase or renewal email. Cancellation keeps access through your paid period.")
-                .setPositiveButton("Open account", (dialog, which) ->
-                        startActivity(new Intent(this, AccountActivity.class)))
-                .setNegativeButton("Close", null).show();
+                .setMessage("Your subscription portal is unavailable right now. Use the customer portal link in your RevenueCat purchase or renewal email to manage or cancel billing.")
+                .setPositiveButton("OK", null).show();
     }
 
     private CheckBox addCategory(LinearLayout parent, String title, String subtitle, int bit) {
