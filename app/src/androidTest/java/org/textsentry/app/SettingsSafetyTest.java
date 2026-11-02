@@ -15,7 +15,7 @@ public class SettingsSafetyTest {
         Settings settings = new Settings(context);
         assertEquals("jev-latest", settings.model());
         assertTrue(settings.systemOne());
-        assertEquals(95, settings.confidence());
+        assertEquals(90, settings.confidence());
         settings.savePolicy("Only clear promotional opt-outs", 82, "STOP");
         Settings again = new Settings(context);
         assertEquals(82, again.confidence());

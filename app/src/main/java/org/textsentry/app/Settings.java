@@ -17,7 +17,7 @@ public final class Settings {
             "Only reply STOP to unmistakably opt-in marketing messages that explicitly " +
             "describe a STOP unsubscribe option. Ignore personal messages, scams, " +
             "transactional notices, and uncertainty.";
-    public static final int DEFAULT_CONFIDENCE = 95;
+    public static final int DEFAULT_CONFIDENCE = 90;
     private final SharedPreferences prefs;
     private final Context appContext;
 

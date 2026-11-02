@@ -53,6 +53,20 @@ final class WebCheckout {
         }
     }
 
+    /** Account API supplies RevenueCat's customer-specific portal, never a guessed URL. */
+    static String managementUrlFromAccount(String body) {
+        try {
+            String url = new JSONObject(body).optString("subscription_management_url", "");
+            java.net.URI uri = new java.net.URI(url);
+            if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || uri.getHost() == null || uri.getHost().isEmpty()
+                    || uri.getUserInfo() != null) return null;
+            return url;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     /** Only call on a background thread; the authenticated account endpoint returns no SMS. */
     static String fetchUserId(String accessToken) throws IOException {
         try {

@@ -7,6 +7,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import net.openid.appauth.AuthState;
+import net.openid.appauth.AuthorizationService;
+import android.content.ActivityNotFoundException;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -52,6 +55,11 @@ public final class SettingsActivity extends Activity {
         UiKit.chip(this, provider, AnalysisAccess.status(this));
         UiKit.button(this, provider, "Manage account", false, () ->
                 startActivity(new Intent(this, AccountActivity.class)));
+        boolean managedAccount = new AuthSessionStore(this).hasSession();
+        if (managedAccount) {
+            UiKit.button(this, provider, "Manage subscription", true, this::manageSubscription);
+        }
+        if (!managedAccount) {
         apiKey = UiKit.input(this, provider, "Your TypeSafe key (optional)", "", false, true);
         apiKey.setHint("API key");
         keyState = UiKit.description(this, provider, "");
@@ -67,6 +75,7 @@ public final class SettingsActivity extends Activity {
                             refreshKey();
                             if (!SetupGate.hasAccess(this)) SetupGate.enforce(this);
                         }).setNegativeButton("Cancel", null).show());
+        }
 
         LinearLayout rules = UiKit.card(this, root, 0xFFFFFFFF);
         UiKit.heading(this, rules, "Filter categories");
@@ -113,6 +122,119 @@ public final class SettingsActivity extends Activity {
                             DataControl.deleteLocalData(this);
                             finish();
                         }).setNegativeButton("Cancel", null).show());
+        if (!getPackageName().isEmpty()) {
+            LinearLayout background = UiKit.card(this, root, 0xFFFFFFFF);
+            UiKit.heading(this, background, "Background operation");
+            UiKit.button(this, background, "Background battery settings", false, () ->
+                    startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName()))));
+        }
+
+        LinearLayout sampleCard = UiKit.card(this, root, 0xFFFFFFFF);
+        UiKit.heading(this, sampleCard, "Try it");
+        EditText sample = UiKit.input(this, sampleCard, "Sample message",
+                "Sale today! Reply STOP to unsubscribe.", true, false);
+        TextView sampleResult = UiKit.description(this, sampleCard, "");
+        UiKit.button(this, sampleCard, "Analyze sample", true, () -> {
+            String content = sample.getText().toString();
+            if (!MessagePolicy.eligible("+15555550123", content)) {
+                sampleResult.setText("Blocked by safety rules.");
+                return;
+            }
+            String instructions;
+            try {
+                instructions = MessageCategories.compose(selectedMask(), settings.prompt());
+            } catch (IllegalArgumentException invalid) {
+                sampleResult.setText("Check your filter rules.");
+                return;
+            }
+            if (instructions.isEmpty()) {
+                sampleResult.setText("Select a filter category first.");
+                return;
+            }
+            sampleResult.setText("Analyzing…");
+            final String policy = instructions;
+            new Thread(() -> {
+                String answer;
+                try {
+                    SystemOneClient.Evaluation result = AnalysisAccess.evaluate(this,
+                            policy, content, confidence / 100.0,
+                            DeveloperMode.traceSink(this, "sample"));
+                    answer = (result.decision.shouldReply ? "Suggest STOP" : "No reply")
+                            + " · " + Math.round(result.confidence * 100) + "% match";
+                } catch (Exception ignored) {
+                    answer = "Analysis unavailable. Check your connection.";
+                }
+                String finalAnswer = answer;
+                runOnUiThread(() -> sampleResult.setText(finalAnswer));
+            }, "textsentry-sample").start();
+        });
+
+    }
+
+    private void manageSubscription() {
+        AuthSessionStore sessions = new AuthSessionStore(this);
+        if (!sessions.hasSession()) {
+            startActivity(new Intent(this, AccountActivity.class));
+            return;
+        }
+        AuthorizationService service = new AuthorizationService(this);
+        try {
+            AuthState state = sessions.load();
+            if (state == null || !state.isAuthorized()) {
+                showPortalHelp();
+                service.dispose();
+                return;
+            }
+            state.performActionWithFreshTokens(service, (accessToken, idToken, error) -> {
+                if (error != null || accessToken == null) {
+                    runOnUiThread(this::showPortalHelp);
+                    service.dispose();
+                    return;
+                }
+                try {
+                    sessions.save(state);
+                } catch (Exception ignored) {
+                    runOnUiThread(this::showPortalHelp);
+                    service.dispose();
+                    return;
+                }
+                new Thread(() -> {
+                    String destination = null;
+                    try {
+                        destination = WebCheckout.managementUrlFromAccount(
+                                WebCheckout.fetchAccount(accessToken));
+                    } catch (Exception ignored) {
+                        // Never display tokens or provider responses.
+                    }
+                    final String target = destination;
+                    runOnUiThread(() -> {
+                        service.dispose();
+                        if (isFinishing() || isDestroyed()) return;
+                        if (target == null) {
+                            showPortalHelp();
+                            return;
+                        }
+                        try {
+                            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(target))
+                                    .addCategory(Intent.CATEGORY_BROWSABLE));
+                        } catch (ActivityNotFoundException ignored) {
+                            showPortalHelp();
+                        }
+                    });
+                }, "textsentry-subscription-portal").start();
+            });
+        } catch (Exception ignored) {
+            service.dispose();
+            showPortalHelp();
+        }
+    }
+
+    private void showPortalHelp() {
+        new AlertDialog.Builder(this)
+                .setTitle("Manage subscription")
+                .setMessage("Your subscription portal is unavailable right now. Use the customer portal link in your RevenueCat purchase or renewal email to manage or cancel billing.")
+                .setPositiveButton("OK", null).show();
     }
 
     private CheckBox addCategory(LinearLayout parent, String title, String subtitle, int bit) {
@@ -146,6 +268,7 @@ public final class SettingsActivity extends Activity {
     }
 
     private void refreshKey() {
+        if (keyState == null) return;
         keyState.setText(vault.hasKey()
                 ? "✓ Own key saved"
                 : "Optional for signed-in users");
@@ -153,12 +276,12 @@ public final class SettingsActivity extends Activity {
 
     private void save() {
         String policy = settings.prompt(); // Keep the developer prompt on normal saves.
-        String entered = apiKey.getText().toString().trim();
+        String entered = apiKey == null ? "" : apiKey.getText().toString().trim();
         try {
             // If saving the key fails, never enable automation or silently lose settings.
             if (!entered.isEmpty()) vault.save(entered);
             settings.saveCategoryPolicy(policy, confidence, selectedMask());
-            apiKey.setText("");
+            if (apiKey != null) apiKey.setText("");
             toast("Settings saved");
             finish();
         } catch (Exception ex) {
