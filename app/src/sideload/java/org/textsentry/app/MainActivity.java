@@ -56,47 +56,6 @@ public final class MainActivity extends Activity {
             });
         }
 
-        LinearLayout preview = UiKit.card(this, root, 0xFFFFFFFF);
-        UiKit.heading(this, preview, "Try it");
-        EditText sample = UiKit.input(this, preview, "Sample message",
-                "Sale today! Reply STOP to unsubscribe.", true, false);
-        sample.setMinLines(2);
-        TextView result = UiKit.description(this, preview, "");
-        UiKit.button(this, preview, "Analyze sample", true, () -> {
-            String content = sample.getText().toString();
-            if (!MessagePolicy.eligible("+15555550123", content)) {
-                result.setText("Blocked by safety rules.");
-                return;
-            }
-            final String instructions;
-            try {
-                instructions = settings.effectivePrompt();
-            } catch (IllegalArgumentException e) {
-                result.setText("Check your rules in Settings.");
-                return;
-            }
-            if (instructions.isEmpty()) {
-                result.setText("Choose a category in Settings.");
-                return;
-            }
-            final double threshold = settings.confidence() / 100.0;
-            result.setText("Analyzing…");
-            new Thread(() -> {
-                String answer;
-                try {
-                    SystemOneClient.Evaluation evaluation = AnalysisAccess.evaluate(this,
-                            instructions, content, threshold,
-                            DeveloperMode.traceSink(this, "sample"));
-                    answer = (evaluation.decision.shouldReply ? "Suggest STOP" : "No reply")
-                            + " · " + Math.round(evaluation.confidence * 100) + "% match";
-                } catch (Exception e) {
-                    answer = "Analysis unavailable. Check your connection.";
-                }
-                String finalAnswer = answer;
-                runOnUiThread(() -> result.setText(finalAnswer));
-            }, "textsentry-sample").start();
-        });
-
         if (!hasReceivePermission() || (settings.autoSend() && !hasSendPermission())) {
             LinearLayout permissions = UiKit.card(this, root, 0xFFFFFFFF);
             UiKit.heading(this, permissions, "Permissions");
@@ -121,10 +80,6 @@ public final class MainActivity extends Activity {
                 startActivity(new Intent(this, SettingsActivity.class)));
         UiKit.button(this, navigate, "Account", false, () ->
                 startActivity(new Intent(this, AccountActivity.class)));
-        if (!PermissionSetup.batteryOptimizationsExempt(this)) {
-            UiKit.button(this, navigate, "Background battery settings", false,
-                    () -> PermissionSetup.openBatterySettings(this));
-        }
     }
 
     private boolean hasReceivePermission() {
