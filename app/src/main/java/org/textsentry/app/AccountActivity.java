@@ -126,7 +126,8 @@ public final class AccountActivity extends Activity {
                         }
                         boolean paid = verified != null
                                 && verified.subscriptionValidForBuild(sandbox);
-                        boolean keyEligible = paid && verified.managedAccess;
+                        boolean keyEligible = verified != null && verified.managedAccess
+                                && verified.subscriptionValidForBuild(false);
                         if (subscribeButton != null && BuildConfig.WEB_CHECKOUT_ENABLED) {
                             if (keyEligible) {
                                 subscribeButton.setEnabled(true);
