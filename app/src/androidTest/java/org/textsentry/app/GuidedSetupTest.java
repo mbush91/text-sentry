@@ -72,6 +72,11 @@ public class GuidedSetupTest {
         android.content.Intent intent = SubscriptionOnboarding.continueSetupIntent(app());
         assertTrue(intent.getBooleanExtra("continue_setup", false));
         assertEquals(AccountActivity.class.getName(), intent.getComponent().getClassName());
+        assertTrue(SetupFlow.subscriptionHandoffPending(app()));
+        // Simulate a fresh Activity after a web checkout redirect.
+        assertTrue(SetupFlow.subscriptionHandoffPending(app()));
+        SetupFlow.completeSubscriptionPrompt(app());
+        assertFalse(SetupFlow.subscriptionHandoffPending(app()));
     }
 
     @Test public void onboardingOnlyAdvancesAfterManagedKeyInstalledInMemory() {
