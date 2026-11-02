@@ -77,6 +77,7 @@ public class GuidedSetupTest {
         assertTrue(SetupFlow.subscriptionHandoffPending(app()));
         SetupFlow.completeSubscriptionPrompt(app());
         assertFalse(SetupFlow.subscriptionHandoffPending(app()));
+        SetupFlow.reset(app());
     }
 
     @Test public void onboardingOnlyAdvancesAfterManagedKeyInstalledInMemory() {
