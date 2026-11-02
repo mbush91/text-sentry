@@ -63,6 +63,41 @@ final class ManagedKeyClient {
             } catch (Exception ignored) { }
             return "Too many requests. Try again shortly.";
         }
+        if (status == 503) {
+            try {
+                JSONObject error = new JSONObject(body);
+                String kind = error.optString("error", "");
+                String stage = error.optString("stage", "");
+                int upstream = error.optInt("upstream_status", 0);
+                String http = upstream >= 400 && upstream <= 599
+                        ? " (HTTP " + upstream + ")" : "";
+                if ("provider_unavailable".equals(kind)) {
+                    switch (stage) {
+                        case "subscription":
+                            return "RevenueCat verification is unavailable. Try again shortly.";
+                        case "guardrail_lookup":
+                            return "OpenRouter model guardrail setup failed" + http + ".";
+                        case "guardrail_assign":
+                            return "OpenRouter model guardrail assignment failed" + http + ".";
+                        case "key_create":
+                            return "OpenRouter key creation failed" + http + "."
+                                    + (upstream == 401 || upstream == 403
+                                            ? " Check management-key access." : "");
+                        case "key_resume":
+                            return "OpenRouter could not resume your managed key" + http + ".";
+                        case "key_suspend":
+                            return "OpenRouter could not suspend your managed key" + http + ".";
+                        default:
+                            break;
+                    }
+                }
+                if ("temporarily_unavailable".equals(kind)
+                        && "database_or_configuration".equals(stage)) {
+                    return "Key database or configuration unavailable. "
+                            + "Check the deployed AWS stack.";
+                }
+            } catch (Exception ignored) { }
+        }
         return "Managed key unavailable (HTTP " + status + ").";
     }
 
