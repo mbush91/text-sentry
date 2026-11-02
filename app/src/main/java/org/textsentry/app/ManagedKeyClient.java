@@ -50,6 +50,22 @@ final class ManagedKeyClient {
         }
     }
 
+    static String failureMessage(int status, String body) {
+        if (status == 401) return "Session expired. Sign in again.";
+        if (status == 402) return "An active subscription is required for managed access.";
+        if (status == 409) return "Provisioning in progress. Try again shortly.";
+        if (status == 429) {
+            try {
+                if ("key_revoked_until_next_month".equals(
+                        new JSONObject(body).optString("error"))) {
+                    return "This month's managed key was revoked and cannot be reissued until next month.";
+                }
+            } catch (Exception ignored) { }
+            return "Too many requests. Try again shortly.";
+        }
+        return "Managed key unavailable (HTTP " + status + ").";
+    }
+
     static KeyResponse fetch(String accessToken) throws IOException {
         if (accessToken == null || accessToken.isBlank()) {
             throw new IOException("Missing account session");
@@ -66,11 +82,17 @@ final class ManagedKeyClient {
             connection.setRequestProperty("Cache-Control", "no-store");
             int status = connection.getResponseCode();
             if (status != 200 && status != 201) {
-                // Never include response bodies, tokens or provider keys in errors.
-                throw new IOException(status == 401 ? "Session expired. Sign in again."
-                        : status == 429 ? "Key limit reached until next month."
-                        : status == 409 ? "Provisioning in progress. Try again shortly."
-                        : "Managed key unavailable (HTTP " + status + ").");
+                // Interpret only the backend's known error code. Never echo
+                // response bodies, access tokens, or provider keys to the UI.
+                String body = "";
+                try (InputStream errors = connection.getErrorStream()) {
+                    if (errors != null) {
+                        byte[] small = new byte[512];
+                        int n = errors.read(small);
+                        if (n > 0) body = new String(small, 0, n, StandardCharsets.UTF_8);
+                    }
+                } catch (IOException ignored) { }
+                throw new IOException(failureMessage(status, body));
             }
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             try (InputStream input = connection.getInputStream()) {
