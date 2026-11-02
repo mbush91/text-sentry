@@ -495,8 +495,12 @@ public final class AccountActivity extends Activity {
                             if (continueSetup) {
                                 // Returning to SetupActivity advances to SMS permissions.
                                 // Only mark the prompt complete AFTER the key is in RAM.
-                                SetupFlow.completeSubscriptionPrompt(this);
-                                finish();
+                                if (SubscriptionOnboarding.completeAfterVerifiedKey(this)) {
+                                    finish();
+                                } else {
+                                    onboardingKeyFetchStarted = false;
+                                    status.setText("Could not install the managed key. Retry.");
+                                }
                             } else if (getIntent().getBooleanExtra("welcome", false)) {
                                 finish();
                             }
