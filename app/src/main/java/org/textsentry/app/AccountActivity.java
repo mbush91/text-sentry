@@ -430,10 +430,15 @@ public final class AccountActivity extends Activity {
         }
         final int generation = authGeneration;
         keyRequestInFlight = true;
+        if (continueWithoutKeyButton != null) {
+            continueWithoutKeyButton.setVisibility(android.view.View.GONE);
+        }
         status.setText("Checking your managed key…");
         try {
             AuthState state = sessions.load();
             if (state == null || !state.isAuthorized()) {
+                keyRequestInFlight = false;
+                onboardingKeyFetchStarted = false;
                 ManagedKeyMemory.clear();
                 status.setText("Sign in again to refresh your account.");
                 return;
