@@ -39,7 +39,8 @@ public final class OwnKeyAgreementTest {
             instrumentation.runOnMainSync(() -> {
                 AlertDialog dialog = OwnKeyAgreement.show(activity, () -> accepted.set(true));
                 assertTrue(dialog.isShowing());
-                assertEquals(OwnKeyAgreement.TITLE, dialog.getTitle());
+                assertNotNull(dialog.getButton(DialogInterface.BUTTON_POSITIVE));
+                assertNotNull(dialog.getButton(DialogInterface.BUTTON_NEGATIVE));
                 dialog.getButton(DialogInterface.BUTTON_NEGATIVE).performClick();
             });
             assertFalse("Cancel must not approve using a personal key", accepted.get());
