@@ -49,6 +49,9 @@ public final class OwnKeyAgreementTest {
                 AlertDialog dialog = OwnKeyAgreement.show(activity, () -> accepted.set(true));
                 dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
             });
+            // AlertDialog delivers button listeners through its Handler, after
+            // performClick() returns; drain the main looper before asserting.
+            instrumentation.waitForIdleSync();
             assertTrue("Only explicit agreement invokes the caller", accepted.get());
         } finally {
             instrumentation.runOnMainSync(activity::finish);
