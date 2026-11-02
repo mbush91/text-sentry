@@ -93,8 +93,8 @@ public class AccountStatusClientTest {
         AccountStatusClient.Status betaOnly = AccountStatusClient.parse(
                 "{\"user_id\":\"id\",\"subscription_status\":\"inactive\","
                 + "\"managed_access\":true}");
-        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, betaOnly, false));
-        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, null, false));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, betaOnly));
+        assertFalse(SubscriptionOnboarding.shouldRetrieveKey(true, false, null));
     }
 
     @Test public void unsupportedResponseIsRejected() {
