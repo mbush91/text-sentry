@@ -144,7 +144,7 @@ public final class AccountActivity extends Activity {
                             }
                         }
                         if (SubscriptionOnboarding.shouldRetrieveKey(continueSetup,
-                                onboardingKeyFetchStarted, verified, sandbox)) {
+                                onboardingKeyFetchStarted, verified)) {
                             onboardingKeyFetchStarted = true;
                             fetchManagedKey();
                         }
