@@ -29,6 +29,28 @@ public class ManagedKeyClientTest {
                 ManagedKeyClient.failureMessage(503, ""));
     }
 
+    @Test public void providerErrorGivesSanitizedActionableDiagnostic() {
+        assertEquals("OpenRouter key creation failed (HTTP 403). Check management-key access.",
+                ManagedKeyClient.failureMessage(503,
+                        "{\"error\":\"provider_unavailable\",\"stage\":\"key_create\",\"upstream_status\":403}"));
+        assertEquals("OpenRouter model guardrail setup failed (HTTP 400).",
+                ManagedKeyClient.failureMessage(503,
+                        "{\"error\":\"provider_unavailable\",\"stage\":\"guardrail_lookup\",\"upstream_status\":400}"));
+        assertEquals("RevenueCat verification is unavailable. Try again shortly.",
+                ManagedKeyClient.failureMessage(503,
+                        "{\"error\":\"provider_unavailable\",\"stage\":\"subscription\"}"));
+        assertEquals("Key database or configuration unavailable. Check the deployed AWS stack.",
+                ManagedKeyClient.failureMessage(503,
+                        "{\"error\":\"temporarily_unavailable\",\"stage\":\"database_or_configuration\"}"));
+        assertEquals("Managed key unavailable (HTTP 503).",
+                ManagedKeyClient.failureMessage(503,
+                        "{\"error\":\"provider_unavailable\",\"stage\":\"not-a-recognized-stage\",\"upstream_status\":401}"));
+        assertEquals("Managed key unavailable (HTTP 503).",
+                ManagedKeyClient.failureMessage(503, "{\"stage\":\"key_create\"}"));
+        assertEquals("Managed key unavailable (HTTP 503).",
+                ManagedKeyClient.failureMessage(503, "not-json"));
+    }
+
     @Test public void refusesExpiredMissingOrOverBudgetKeys() throws Exception {
         for (String json : new String[] {
             "{\"key\":\"x\",\"period\":\"2020-01\",\"expires_at\":\"2020-02-01T00:00:00Z\",\"monthly_limit_usd\":1}",
