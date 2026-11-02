@@ -38,6 +38,22 @@ public class SystemOneClientTest {
         assertEquals(0.97, evaluation.confidence, 0.00001);
     }
 
+    @Test public void managedRoutingFailureNeverFallsBackToNonZdrOrByok() throws Exception {
+        final int[] calls = {0};
+        SystemOneClient client = new SystemOneClient((url, key, body) -> {
+            calls[0]++;
+            assertEquals(SystemOneClient.OPENROUTER_ENDPOINT, url);
+            throw new java.io.IOException("No ZDR eligible endpoint");
+        });
+        try {
+            client.evaluateManaged("test-managed-key", PROMPT, MESSAGE, "STOP", 0.90, null);
+            fail("Managed request must fail closed if OpenRouter rejects ZDR routing");
+        } catch (java.io.IOException expected) {
+            assertTrue(expected.getMessage().contains("ZDR"));
+        }
+        assertEquals(1, calls[0]);
+    }
+
     @Test public void managedOpenRouterPreservesFailClosedAndTraceBehavior() throws Exception {
         String[] captured = new String[2];
         SystemOneClient client = new SystemOneClient((url, key, body) -> result(0.83));
