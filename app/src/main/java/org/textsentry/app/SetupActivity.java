@@ -134,8 +134,15 @@ public final class SetupActivity extends Activity {
         skip.setClickable(true);
         skip.setFocusable(true);
         skip.setOnClickListener(v -> {
-            showingOwnKey = !showingOwnKey;
-            renderLogin();
+            if (showingOwnKey) {
+                showingOwnKey = false;
+                renderLogin();
+            } else {
+                OwnKeyAgreement.show(this, () -> {
+                    showingOwnKey = true;
+                    renderLogin();
+                });
+            }
         });
 
         if (showingOwnKey) {
