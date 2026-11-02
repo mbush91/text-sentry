@@ -57,7 +57,7 @@ final class WebCheckout {
     static String managementUrlFromAccount(String body) {
         try {
             String url = new JSONObject(body).optString("subscription_management_url", "");
-            android.net.Uri uri = android.net.Uri.parse(url);
+            java.net.URI uri = new java.net.URI(url);
             if (!"https".equalsIgnoreCase(uri.getScheme())
                     || uri.getHost() == null || uri.getHost().isEmpty()
                     || uri.getUserInfo() != null) return null;
