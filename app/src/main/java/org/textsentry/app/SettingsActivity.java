@@ -275,8 +275,16 @@ public final class SettingsActivity extends Activity {
     }
 
     private void save() {
-        String policy = settings.prompt(); // Keep the developer prompt on normal saves.
         String entered = apiKey == null ? "" : apiKey.getText().toString().trim();
+        if (!entered.isEmpty()) {
+            OwnKeyAgreement.show(this, () -> saveAccepted(entered));
+            return;
+        }
+        saveAccepted("");
+    }
+
+    private void saveAccepted(String entered) {
+        String policy = settings.prompt(); // Keep the developer prompt on normal saves.
         try {
             // If saving the key fails, never enable automation or silently lose settings.
             if (!entered.isEmpty()) vault.save(entered);
