@@ -8,7 +8,7 @@
 
 ## What TextSentry does
 
-Before entering the app you must either sign in through Google/Cognito or save your own TypeSafe API key (BYOK). The alternative does not require an account. Signed-in users analyze messages directly through **OpenRouter's Jev Decisions API** using a RAM-only monthly capped key; BYOK users analyze directly through **TypeSafe Jev**. TextSentry never sends SMS content to its AWS account/key-management backend. There are no analytics or advertising SDKs.
+Before entering the app you must either sign in through Google/Cognito or save your own TypeSafe API key (BYOK). The alternative does not require an account. Before entering a personally provided key, the app requires a dialog acknowledgment that the user is responsible for the provider agreement, data retention and usage charges; canceling keeps personal-key setup closed. Replacing a key in Settings also requires that acknowledgment. Signed-in users analyze messages directly through **OpenRouter's Jev Decisions API** using a RAM-only monthly capped key; BYOK users analyze directly through **TypeSafe Jev**. TextSentry never sends SMS content to its AWS account/key-management backend. There are no analytics or advertising SDKs.
 
 **Google Play edition:** You decide what text to paste or explicitly share with the app. The Play edition does not read incoming messages automatically, cannot send messages automatically, does not request SMS/call-log permissions, and cannot inspect your SMS inbox. You may review and edit an AI suggestion, then manually open your existing SMS app to compose a reply. The SMS app, not TextSentry, sends it after your approval.
 
