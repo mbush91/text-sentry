@@ -170,9 +170,7 @@ public final class SetupActivity extends Activity {
                 "Active subscription? We'll set up your key and continue automatically.");
         if (BuildConfig.WEB_CHECKOUT_ENABLED) {
             UiKit.button(this, card, "Check subscription and continue", true, () -> {
-                Intent account = new Intent(this, AccountActivity.class);
-                account.putExtra("continue_setup", true);
-                startActivity(account);
+                startActivity(SubscriptionOnboarding.continueSetupIntent(this));
             });
             UiKit.description(this, card,
                     "Secure checkout opens in your browser. Payments may be real or test "
