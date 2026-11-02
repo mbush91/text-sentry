@@ -188,3 +188,28 @@ jobs:
           prerelease: true
           generate_release_notes: true
           files: TextSentry-0.1.0-build-${{ github.run_number }}.apk
+      # Publish a second, rolling prerelease with a fixed asset name. The static
+      # TextSentry website links here; /releases/latest excludes prereleases.
+      - name: Update latest signed sideload APK
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          build_apk="TextSentry-0.1.0-build-${GITHUB_RUN_NUMBER}.apk"
+          latest_apk="TextSentry-Android-latest.apk"
+          test -s "$build_apk"
+          cp "$build_apk" "$latest_apk"
+          title="TextSentry latest experimental Android APK (build ${GITHUB_RUN_NUMBER})"
+          notes="Rolling signed sideload APK from main, build ${GITHUB_RUN_NUMBER}. Experimental: check permissions and release notes before enabling SMS monitoring. Versioned prereleases remain available."
+          if gh release view latest --json tagName >/dev/null 2>&1; then
+            gh release upload latest "$latest_apk" --clobber
+            gh release edit latest --title "$title" --notes "$notes" --prerelease
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/latest" -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          else
+            gh release create latest "$latest_apk" --target "$GITHUB_SHA" --title "$title" --notes "$notes" --prerelease
+          fi
+          mkdir -p "$RUNNER_TEMP/latest-verify"
+          gh release download latest --pattern "$latest_apk" --dir "$RUNNER_TEMP/latest-verify"
+          cmp "$latest_apk" "$RUNNER_TEMP/latest-verify/$latest_apk"
